@@ -1,0 +1,10 @@
+def add(a, b, res) {
+    res.next = a + b
+}
+
+def main() {
+    a = Signal(Int, 3)
+    b = Signal(Int, 3)
+    res = Signal(Int, 3)
+    convert(add, a, b, res)
+}
