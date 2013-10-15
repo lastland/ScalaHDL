@@ -18,6 +18,6 @@ object Main extends SHDLParser {
       case Success(pro, _) => pro
       case _ => throw new RuntimeException
     }
-    println(p.modules)
+    println(p.convert)
   }
 }

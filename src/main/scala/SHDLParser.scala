@@ -67,7 +67,6 @@ class SHDLParser extends StandardTokenParsers {
     }
 
   def run(text: String) = { 
-    println(text)
     var fn = shdlprogram
     fn(new lexical.Scanner(text))
   }
