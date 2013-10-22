@@ -1,11 +1,16 @@
 package ScalaHDL
 
-object Main extends DSL { 
+import ScalaHDL.DataType._
+
+object Main extends ScalaHDL { 
   def main(args: Array[String]) { 
-    val t = module.add('a, 'b, 'res) { 
+    module.adder('a, 'b, 'res) { 
       'res := 'a + 'b
+      'res := 'res + 'a
     }
-    println(t)
-    convert('add)
+    val a = Signal(3, 3)
+    val b = Signal(2, 3)
+    val res = Signal(0, 3)
+    println(convert('adder, a, b, res))
   }
 }
