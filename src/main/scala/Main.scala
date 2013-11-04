@@ -2,15 +2,14 @@ package ScalaHDL
 
 import ScalaHDL.DataType._
 
-object Main extends ScalaHDL { 
-  def main(args: Array[String]) { 
-    module.adder('a, 'b, 'res) { 
-      'res := 'a + 'b
-      'res := 'res + 'a
+object Main extends ScalaHDL {
+  def main(args: Array[String]) {
+    sync(clk = 1)
+    module.logic('d, 'q) {
+      'q := 'd
     }
-    val a = Signal(3, 3)
-    val b = Signal(2, 3)
-    val res = Signal(0, 3)
-    println(convert('adder, a, b, res))
+    val q = Signal(3, 3)
+    val d = Signal(2, 3)
+    println(convert('logic, d, q))
   }
 }
