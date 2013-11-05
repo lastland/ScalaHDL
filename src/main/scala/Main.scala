@@ -6,7 +6,7 @@ import ScalaHDL.DataType._
 import ScalaHDL.Simulation.Simulator
 
 object Main extends ScalaHDL {
-  sync(clk = 1)
+  sync('clk is 1)
   defMod.logic('d, 'q, 'clk) {
     'q := 'd
   }
@@ -16,7 +16,7 @@ object Main extends ScalaHDL {
     cycle('clk)
   }
 
-  sync(clk = 0)
+  sync('clk is 0)
   defMod.stimulus('d, 'clk) {
     'd := Random.nextInt(2)
   }

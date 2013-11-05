@@ -9,27 +9,14 @@ import ScalaHDL.DataType._
 package Conditions {
   private[ScalaHDL] abstract class condition {
     def copy(): condition
-    def header(): String
+    def header(): String = ""
   }
 
-  private[ScalaHDL] final class _sync extends condition {
-    var _rst = -1
-    var _clk = -1
-    val others = new HashMap[Symbol, Int]
+  private[ScalaHDL] final class _nocondition extends condition {
+    override def copy(): condition = new _nocondition
+  }
 
-    def this(rst: Int, clk: Int) {
-      this
-      _rst = rst
-      _clk = clk
-    }
-
-    def this(rst: Int, clk: Int, oth: HashMap[Symbol, Int]) {
-      this(rst, clk)
-      for (item <- oth) others += item
-    }
-
-    private def isDefault(): Boolean =
-      _rst == -1 && _clk == -1 && others.isEmpty
+  private[ScalaHDL] final class _sync(s: Symbol, v: Int) extends condition {
 
     private def _convert(name: String, value: Int): String = value match {
       case -1 => ""
@@ -39,23 +26,15 @@ package Conditions {
     }
 
     override def header(): String = {
-      if (isDefault) {
-        ""
-      } else {
-        // TODO: others
-        val conds = List(_convert("clk", _clk), _convert("rst", _rst))
-        "always @ (" + conds.filter(!_.isEmpty).mkString(" or ") + ")"
-      }
+      // TODO: multiple sync
+      "always @ (" + _convert(s.name, v) + ")"
     }
 
     override def copy(): condition =
-      new  _sync(_rst, _clk, others)
+      new  _sync(s, v)
   }
 
   private[ScalaHDL] final class _delay(time: Int) extends condition {
-    override def header(): String =
-      ""
-
     override def copy(): condition =
       new _delay(time)
   }
@@ -84,7 +63,7 @@ class ScalaHDL {
   }
   private val moduleConds = new HashMap[Symbol, condition]()
   private var currentMod = new HDLModule('notused, List())
-  private var currentCond: condition = new _sync
+  private var currentCond: condition = new _nocondition
 
   object HDLOperation extends Enumeration {
     type HDLOperation = Value
@@ -93,8 +72,8 @@ class ScalaHDL {
   import HDLOperation._
 
 
-  def sync(rst: Int = -1, clk: Int = -1) {
-    currentCond = new _sync(rst, clk)
+  def sync(s: => _sync) {
+    currentCond = s
   }
 
   def delay(t: Int) {
@@ -142,6 +121,7 @@ class ScalaHDL {
     def *(other: HDLObject) = HDLFunc2(mul, this, other)
     def /(other: HDLObject) = HDLFunc2(div, this, other)
     def :=(other: HDLObject) = HDLAssignment.createAssignment(currentMod, this, other)
+    def is(value: Int): _sync = new _sync(name, value)
     def convert(): String = name.name
   }
 
@@ -171,7 +151,7 @@ class ScalaHDL {
       modules += (name -> m)
       moduleConds += (name -> currentCond.copy)
       currentMod = m
-      currentCond = new _sync
+      currentCond = new _nocondition
       m
     }
   }
