@@ -29,6 +29,6 @@ object Main extends ScalaHDL {
     sim.simulate(
       module('logic, q, d, clk),
       module('clkGen, clk),
-      module('stimulus, clk))
+      module('stimulus, d, clk))
   }
 }

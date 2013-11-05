@@ -104,6 +104,9 @@ class ScalaHDL {
   def module(name: Symbol, sigs: Signal*): module =
     Module.module(name, sigs: _*)
 
+  def Signal(value: Int, bits: Int = 1): Signal =
+    new Signal(value, bits)
+
   abstract sealed class HDLObject {
     def convert(): String
   }
