@@ -1,5 +1,6 @@
-package ScalaHDL.DataType
+package ScalaHDL.DataType {
 
-abstract sealed class HDLDataType
+  abstract sealed class HDLDataType
 
-case class Signal(value: Int, bit: Int) extends HDLDataType
+  case class Signal(value: Int, bit: Int = 1) extends HDLDataType
+}

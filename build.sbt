@@ -6,8 +6,12 @@ version := "0.0.1"
 
 scalaVersion := "2.10.2"
 
-scalacOptions += "-Xexperimental"
+autoCompilerPlugins := true
+
+scalacOptions ++= Seq("-Xexperimental",
+  "-P:continuations:enable")
 
 libraryDependencies ++= Seq(
-		    "org.scalatest" %% "scalatest" % "1.9.2" % "test",
-		    "org.scala-lang" % "scala-reflect" % scalaVersion.value)
+  "org.scalatest" %% "scalatest" % "1.9.2" % "test",
+  "org.scala-lang" % "scala-reflect" % scalaVersion.value,
+  compilerPlugin("org.scala-lang.plugins" % "continuations" % scalaVersion.value))

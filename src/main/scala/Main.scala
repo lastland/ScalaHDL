@@ -1,15 +1,34 @@
 package ScalaHDL
 
+import scala.util.Random
+
 import ScalaHDL.DataType._
+import ScalaHDL.Simulation.Simulator
 
 object Main extends ScalaHDL {
+  sync(clk = 1)
+  defMod.logic('d, 'q, 'clk) {
+    'q := 'd
+  }
+
+  delay(10)
+  defMod.clkGen('clk) {
+    cycle('clk)
+  }
+
+  sync(clk = 0)
+  defMod.stimulus('d, 'clk) {
+    'd := Random.nextInt(2)
+  }
+
   def main(args: Array[String]) {
-    sync(clk = 1)
-    module.logic('d, 'q) {
-      'q := 'd
-    }
-    val q = Signal(3, 3)
-    val d = Signal(2, 3)
-    println(convert('logic, d, q))
+    val q = Signal(0)
+    val d = Signal(1)
+    val clk = Signal(0)
+    val sim = new Simulator(this)
+    sim.simulate(
+      module('logic, q, d, clk),
+      module('clkGen, clk),
+      module('stimulus, clk))
   }
 }

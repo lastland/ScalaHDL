@@ -6,25 +6,13 @@ import scala.collection.mutable.HashMap
 
 import ScalaHDL.DataType._
 
-class ScalaHDL {
-
-  implicit def string2Symbol(s: String) = Symbol(s)
-
-  private val modules = new HashMap[Symbol, HDLModule]
-  private val moduleStmts = new HashMap[Symbol, List[HDLObject]] {
-    override def default(key: Symbol) = List[HDLObject]()
+package Conditions {
+  private[ScalaHDL] abstract class condition {
+    def copy(): condition
+    def header(): String
   }
-  private val moduleConds = new HashMap[Symbol, _sync]()
-  private var currentMod = new HDLModule('notused, List())
-  private var currentSync = new _sync
 
-  object HDLOperation extends Enumeration {
-    type HDLOperation = Value
-    val add, sub, mul, div = Value
-  }
-  import HDLOperation._
-
-  private final class _sync {
+  private[ScalaHDL] final class _sync extends condition {
     var _rst = -1
     var _clk = -1
     val others = new HashMap[Symbol, Int]
@@ -40,7 +28,7 @@ class ScalaHDL {
       for (item <- oth) others += item
     }
 
-    def isDefault(): Boolean =
+    private def isDefault(): Boolean =
       _rst == -1 && _clk == -1 && others.isEmpty
 
     private def _convert(name: String, value: Int): String = value match {
@@ -50,7 +38,7 @@ class ScalaHDL {
       case _ => throw new RuntimeException // Not supposed to happen
     }
 
-    def header(): String = {
+    override def header(): String = {
       if (isDefault) {
         ""
       } else {
@@ -60,26 +48,76 @@ class ScalaHDL {
       }
     }
 
-    def clear() {
-      _rst = -1
-      _clk = -1
-      others.clear()
-    }
-
-    def copy(): _sync = {
+    override def copy(): condition =
       new  _sync(_rst, _clk, others)
-    }
   }
+
+  private[ScalaHDL] final class _delay(time: Int) extends condition {
+    override def header(): String =
+      ""
+
+    override def copy(): condition =
+      new _delay(time)
+  }
+}
+
+package Module {
+  case class module(name: Symbol, sigs: Signal*)
+}
+
+class ScalaHDL {
+  import Conditions._
+  import Module._
+
+  implicit def string2Symbol(s: String) = Symbol(s)
+  implicit def int2Signal(value: Int) = Signal(value, intBits(value))
+  implicit def int2HDLSignal(value: Int) = HDLSignal(int2Signal(value))
+  implicit def symbol2Ident(s: Symbol) = HDLIdent(s)
+  implicit def signal2HDLSignal(s: Signal) = HDLSignal(s)
+  private def intBits(value: Int): Int =
+    if (value == 0) 0
+    else 1 + intBits(value >> 1)
+
+  private val modules = new HashMap[Symbol, HDLModule]
+  private val moduleStmts = new HashMap[Symbol, List[HDLObject]] {
+    override def default(key: Symbol) = List[HDLObject]()
+  }
+  private val moduleConds = new HashMap[Symbol, condition]()
+  private var currentMod = new HDLModule('notused, List())
+  private var currentCond: condition = new _sync
+
+  object HDLOperation extends Enumeration {
+    type HDLOperation = Value
+    val add, sub, mul, div = Value
+  }
+  import HDLOperation._
+
 
   def sync(rst: Int = -1, clk: Int = -1) {
-    currentSync = new _sync(rst, clk)
+    currentCond = new _sync(rst, clk)
   }
+
+  def delay(t: Int) {
+    currentCond = new _delay(t)
+  }
+
+  def module(name: Symbol, sigs: Signal*): module =
+    Module.module(name, sigs: _*)
 
   abstract sealed class HDLObject {
     def convert(): String
   }
 
   abstract sealed class HDLFunc extends HDLObject
+
+  case class HDLFunc1 (op: HDLOperation, a: HDLObject) extends HDLFunc {
+    def convert(): String = op match {
+      case `add` => " + " + a.convert()
+      case `sub` => " - " + a.convert()
+      case `mul` => " * " + a.convert()
+      case `div` => " / " + a.convert()
+    }
+  }
 
   case class HDLFunc2 (op: HDLOperation, a: HDLObject, b: HDLObject) extends HDLFunc {
     def convert(): String = op match {
@@ -104,26 +142,33 @@ class ScalaHDL {
     def convert(): String = name.name
   }
 
+  case class HDLSignal(sig: Signal) extends HDLObject {
+    def convert(): String = sig.value.toString
+  }
+
   case class HDLModule(name: Symbol, params: Seq[Symbol]) {
     def apply(f: => HDLObject) = f
 
     def convert(args: Seq[HDLDataType]): String = {
       val lst = moduleStmts(name)
       val modHeader = "module " + name.name + "(\n" +
-        params.map(_.name).mkString(",\n") + "\n);\n"
+      params.map(_.name).mkString(",\n") + "\n);\n"
       val beginHeader = moduleConds(name).header + "begin\n"
       val stmts = for (stmt <- moduleStmts(name).reverse) yield stmt.convert()
       modHeader + "\n" + beginHeader + stmts.mkString(";\n") + "\nend\n\nendmodule\n"
     }
   }
 
+  def cycle(a: HDLIdent): HDLAssignment =
+    HDLAssignment.createAssignment(currentMod, a, HDLFunc1(sub, a))
+
   object HDLModule {
     def createModule(name: Symbol, params: Seq[Symbol]) = {
       val m = HDLModule(name, params)
       modules += (name -> m)
-      moduleConds += (name -> currentSync.copy)
+      moduleConds += (name -> currentCond.copy)
       currentMod = m
-      currentSync = new _sync
+      currentCond = new _sync
       m
     }
   }
@@ -136,7 +181,7 @@ class ScalaHDL {
     }
   }
 
-  object module extends Dynamic {
+  object defMod extends Dynamic {
     def applyDynamic(name: String)(params: Symbol*): HDLModule = {
       HDLModule.createModule(name, params)
     }
@@ -146,6 +191,4 @@ class ScalaHDL {
     val m = modules(name)
     m.convert(args)
   }
-
-  implicit def symbol2Ident(s: Symbol) = HDLIdent(s)
 }
