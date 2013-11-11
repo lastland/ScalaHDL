@@ -17,11 +17,11 @@ object CoroutineHelper {
     loop(() => body).iterator
   }
 
-  def iterator[R](body: => Unit @cpsParam[Iteration[R], Iteration[R]]): Iterator[R] =
+  def iterator[R](body: => Unit @cps[Iteration[R]]): Iterator[R] =
     trampoline {
       reset[Iteration[R], Iteration[R]] { body; Done }
     }
 
-  def yld[R](result: R): Unit @cpsParam[Iteration[R], Iteration[R]] =
+  def yld[R](result: R): Unit @cps[Iteration[R]] =
     shift((k: Unit => Iteration[R]) => Yield(result, () => k(())))
 }

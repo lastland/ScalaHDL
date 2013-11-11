@@ -1,8 +1,8 @@
 package ScalaHDL
-
 import scala.util.Random
 
-import ScalaHDL.DataType._
+import ScalaHDL.Core.ScalaHDL
+import ScalaHDL.Core.DataType._
 import ScalaHDL.Simulation.Simulator
 
 object Main extends ScalaHDL {
