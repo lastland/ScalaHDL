@@ -169,6 +169,7 @@ package Core {
       override def default(key: Symbol) = List[HDLObject]()
     }
     val moduleConds = new HashMap[Symbol, condition]()
+    val moduleSigMap = new HashMap[Symbol, Map[Symbol, Signal]]
     var currentMod = new HDLModule(hdl, 'notused, List())
     var currentCond: condition = new _nocondition
 

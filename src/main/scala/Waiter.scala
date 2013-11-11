@@ -3,7 +3,7 @@ import ScalaHDL.Core._
 import ScalaHDL.Helpers.CoroutineHelper._
 
 class Waiter(stmts: Seq[HDLObject]) {
-  def next() {
+  val iter =
     iterator[List[Waiter]] {
       var senslist: List[Waiter] = List()
       while (true) {
@@ -11,13 +11,14 @@ class Waiter(stmts: Seq[HDLObject]) {
         for (stmt <- stmts) stmt.exec
       }
     }
-  }
+
+  def next() = iter.next
 }
 
 class SyncWaiter(stmts: Seq[HDLObject]) extends Waiter(stmts)
 
 class DelayWaiter(stmts: Seq[HDLObject], t: Int) extends Waiter(stmts) {
-  override def next() {
+  override val iter =
     iterator[List[Waiter]] {
       var senslist: List[Waiter] = List(this)
       while (true) {
@@ -25,5 +26,8 @@ class DelayWaiter(stmts: Seq[HDLObject], t: Int) extends Waiter(stmts) {
         for (stmt <- stmts) stmt.exec
       }
     }
-  }
+
+  override def next() = iter.next
+
+  def time = t
 }

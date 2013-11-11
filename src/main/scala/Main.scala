@@ -27,6 +27,7 @@ object Main extends ScalaHDL {
     val clk = Signal(0)
     val sim = new Simulator(this)
     sim.simulate(
+      1000,
       module('logic, q, d, clk),
       module('clkGen, clk),
       module('stimulus, d, clk))
