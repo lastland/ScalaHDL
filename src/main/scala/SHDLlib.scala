@@ -135,9 +135,9 @@ package Core {
     override def exec(sigMap: Map[Symbol, Signal]) = sigMap(name)
   }
 
-  case class HDLSignal(hdl: ScalaHDL, sig: Signal) extends HDLObject(hdl) {
-    def convert(): String = sig.value.toString
-    override def exec(sigMap: Map[Symbol, Signal]) = sig
+  case class HDLSignal(hdl: ScalaHDL, sig: () => Signal) extends HDLObject(hdl) {
+    def convert(): String = sig().value.toString
+    override def exec(sigMap: Map[Symbol, Signal]) = sig()
   }
 
   case class HDLModule(hdl: ScalaHDL, name: Symbol, params: Seq[Symbol]) {
@@ -166,10 +166,10 @@ package Core {
 
   class ScalaHDL {
     implicit def string2Symbol(s: String) = Symbol(s)
-    implicit def int2Signal(value: Int) = Signal(value, intBits(value))
-    implicit def int2HDLSignal(value: Int) = HDLSignal(this, int2Signal(value))
+    implicit def int2Signal(value: => Int) = Signal(value, intBits(value))
+    implicit def int2HDLSignal(value: => Int) = HDLSignal(this, () => int2Signal(value))
     implicit def symbol2Ident(s: Symbol) = HDLIdent(this, s)
-    implicit def signal2HDLSignal(s: Signal) = HDLSignal(this, s)
+    implicit def signal2HDLSignal(s: Signal) = HDLSignal(this, () => s)
 
     private val hdl: ScalaHDL = this
 
