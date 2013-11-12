@@ -56,7 +56,7 @@ class Simulator(hdl: ScalaHDL){
         for (sig <- hdl.siglist)
           waiters = sig.update() ::: waiters
         hdl.siglist = List()
-                for (waiter <- waiters) {
+        for (waiter <- waiters) {
           val wl = waiter.next()
           wl.foreach(w => w match {
             case x: DelayWaiter =>
