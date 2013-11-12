@@ -46,29 +46,34 @@ class Simulator(hdl: ScalaHDL){
     wire(mods)
     println("end wiring!")
     var waiters: List[Waiter] = List()
-    var sigs: List[Signal] = List()
     var runtime = 0;
 
     val f = () => {
       while (true) {
-        for (sig <- sigs)
+        for (sig <- hdl.siglist)
           waiters = sig.update() ::: waiters
+        hdl.siglist = List()
+        println("waiters: ", waiters)
         for (waiter <- waiters) {
           val wl = waiter.next()
           wl.foreach(w => w match {
-              case x: DelayWaiter =>
-                schedule(runtime + x.time, x)
-              case _ => ()
+            case x: DelayWaiter =>
+              schedule(runtime + x.time, x)
+            case _ => ()
           })
         }
+        println("siglist: ", hdl.siglist)
 
-        val spans = futureEvents.span(_._1 == futureEvents.head._1)
-        val events = spans._1
-        futureEvents = spans._2
-        runtime = events.head._1
-        if (maxTime != 0 && runtime > maxTime) return
-        if (events.isEmpty) return
-        waiters = events.map(_._2).toList
+        if (hdl.siglist.isEmpty) {
+          println("future.")
+          val spans = futureEvents.span(_._1 == futureEvents.head._1)
+          val events = spans._1
+          futureEvents = spans._2
+          runtime = events.head._1
+          if (maxTime != 0 && runtime > maxTime) return
+          if (events.isEmpty) return
+            waiters = events.map(_._2).toList
+        }
       }
     }
     f()

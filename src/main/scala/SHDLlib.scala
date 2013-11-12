@@ -69,7 +69,7 @@ package Core {
   abstract sealed class HDLObject(hdl: ScalaHDL) {
     def convert(): String
     def exec(sigMap: Map[Symbol, Signal]): Signal = {
-      println("exec!")
+      println("exec %s!".format(this.convert))
       new Signal(0, 1)
     }
   }
@@ -83,6 +83,11 @@ package Core {
       case `sub` => " - " + a.convert()
       case `mul` => " * " + a.convert()
       case `div` => " / " + a.convert()
+    }
+    override def exec(sigMap: Map[Symbol, Signal]): Signal = op match {
+      case `sub` => val b = a.exec(sigMap)
+        new Signal(b.value, b.bits)
+      case _ => a.exec(sigMap)
     }
   }
 
@@ -101,9 +106,10 @@ package Core {
     def convert(): String =
       left.convert() + "<=" + right.convert()
     override def exec(sigMap: Map[Symbol, Signal]) = {
-      println("assignment!")
+      println("assignment! %s".format(this.convert))
       val sig = left.exec(sigMap)
       sig.next = right.exec(sigMap)
+      hdl.siglist = sig :: hdl.siglist
       sig.next
     }
   }
@@ -182,6 +188,8 @@ package Core {
 
     var currentMod = new HDLModule(hdl, 'notused, List())
     var currentCond: condition = new _nocondition
+
+    var siglist: List[Signal] = List()
 
     def sync(s: => _sync) {
       currentCond = s
