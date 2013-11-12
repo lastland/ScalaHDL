@@ -68,8 +68,9 @@ package Core {
 
   abstract sealed class HDLObject(hdl: ScalaHDL) {
     def convert(): String
-    def exec() {
+    def exec(sigMap: Map[Symbol, Signal]): Signal = {
       println("exec!")
+      new Signal(0, 1)
     }
   }
 
@@ -99,6 +100,12 @@ package Core {
     left: HDLIdent, right: HDLObject) extends HDLObject(hdl) {
     def convert(): String =
       left.convert() + "<=" + right.convert()
+    override def exec(sigMap: Map[Symbol, Signal]) = {
+      println("assignment!")
+      val sig = left.exec(sigMap)
+      sig.next = right.exec(sigMap)
+      sig.next
+    }
   }
 
   object HDLAssignment {
@@ -119,11 +126,13 @@ package Core {
     def :=(other: HDLObject) = HDLAssignment.createAssignment(
       hdl, this, other)
     def is(value: Int): _sync = new _sync(name, value)
-    def convert(): String = name.name
+    override def convert(): String = name.name
+    override def exec(sigMap: Map[Symbol, Signal]) = sigMap(name)
   }
 
   case class HDLSignal(hdl: ScalaHDL, sig: Signal) extends HDLObject(hdl) {
     def convert(): String = sig.value.toString
+    override def exec(sigMap: Map[Symbol, Signal]) = sig
   }
 
   case class HDLModule(hdl: ScalaHDL, name: Symbol, params: Seq[Symbol]) {
@@ -170,6 +179,7 @@ package Core {
     }
     val moduleConds = new HashMap[Symbol, condition]()
     val moduleSigMap = new HashMap[Symbol, Map[Symbol, Signal]]
+
     var currentMod = new HDLModule(hdl, 'notused, List())
     var currentCond: condition = new _nocondition
 

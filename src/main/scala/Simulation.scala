@@ -27,9 +27,9 @@ class Simulator(hdl: ScalaHDL){
       cond match {
         // TODO: the waiter wrap
         case x: _sync => param_sig(x.symbol).addWaiter(
-          new SyncWaiter(stmts), x.cond)
+          new SyncWaiter(stmts, param_sig), x.cond)
         case x: _delay => schedule(x.time,
-          new DelayWaiter(stmts, x.time))
+          new DelayWaiter(stmts, param_sig, x.time))
         case _ => ()
       }
       hdl.moduleSigMap += (name -> param_sig)
@@ -51,8 +51,8 @@ class Simulator(hdl: ScalaHDL){
 
     val f = () => {
       while (true) {
-        for (sig <- sigs) sig.update()
-
+        for (sig <- sigs)
+          waiters = sig.update() ::: waiters
         for (waiter <- waiters) {
           val wl = waiter.next()
           wl.foreach(w => w match {
