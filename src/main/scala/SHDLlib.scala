@@ -69,7 +69,6 @@ package Core {
   abstract sealed class HDLObject(hdl: ScalaHDL) {
     def convert(): String
     def exec(sigMap: Map[Symbol, Signal]): Signal = {
-      println("exec %s!".format(this.convert))
       new Signal(0, 1)
     }
   }
@@ -86,7 +85,8 @@ package Core {
     }
     override def exec(sigMap: Map[Symbol, Signal]): Signal = op match {
       case `sub` => val b = a.exec(sigMap)
-        new Signal(b.value, b.bits)
+        // TODO: more bits
+        new Signal(1 - b.value, b.bits)
       case _ => a.exec(sigMap)
     }
   }
@@ -106,7 +106,6 @@ package Core {
     def convert(): String =
       left.convert() + "<=" + right.convert()
     override def exec(sigMap: Map[Symbol, Signal]) = {
-      println("assignment! %s".format(this.convert))
       val sig = left.exec(sigMap)
       sig.next = right.exec(sigMap)
       hdl.siglist = sig :: hdl.siglist

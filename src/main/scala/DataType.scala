@@ -19,13 +19,13 @@ package ScalaHDL.Core.DataType {
 
     def update(): List[Waiter] = {
       var lst = eventWaiters
-      println("updating %s".format(this.toString))
       // TODO: bits, etc.
       if (value < next.value)
         lst = posedgeWaiters ::: lst
       else if (value > next.value)
         lst = negedgeWaiters ::: lst
       value = next.value
+      println("%s is now %d".format(this, value))
       lst
     }
   }

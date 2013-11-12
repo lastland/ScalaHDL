@@ -8,9 +8,8 @@ class Waiter(stmts: Seq[HDLObject], sigMap: Map[Symbol, Signal]) {
     iterator[List[Waiter]] {
       var senslist: List[Waiter] = List()
       while (true) {
-        yld(senslist)
-        println("common waiter!")
         for (stmt <- stmts) stmt.exec(sigMap)
+        yld(senslist)
       }
     }
 
@@ -26,9 +25,8 @@ class DelayWaiter(stmts: Seq[HDLObject], sigMap: Map[Symbol, Signal], t: Int)
     iterator[List[Waiter]] {
       var senslist: List[Waiter] = List(this)
       while (true) {
-        yld(senslist)
-        println("delay waiter!")
         for (stmt <- stmts) stmt.exec(sigMap)
+        yld(senslist)
       }
     }
 

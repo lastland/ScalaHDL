@@ -13,8 +13,9 @@ class Simulator(hdl: ScalaHDL){
   private var futureEvents: PriorityQueue[(Int, Waiter)] =
     new PriorityQueue[(Int, Waiter)]()(Ordering[(Int)].on(x => x._1))
 
-  private def wire(mods: Seq[module]) {
+  private def wire(mods: Seq[module]) = {
     hdl.moduleSigMap.clear()
+    var lst: List[Waiter] = List()
     for (mod <- mods) {
       val name = mod.name
       val sigs = mod.sigs
@@ -26,35 +27,36 @@ class Simulator(hdl: ScalaHDL){
       val param_sig = params.zip(sigs).toMap
       cond match {
         // TODO: the waiter wrap
-        case x: _sync => param_sig(x.symbol).addWaiter(
-          new SyncWaiter(stmts, param_sig), x.cond)
-        case x: _delay => schedule(x.time,
-          new DelayWaiter(stmts, param_sig, x.time))
+        case x: _sync =>
+          val w = new SyncWaiter(stmts, param_sig)
+          param_sig(x.symbol).addWaiter(w, x.cond)
+          lst = w :: lst
+        case x: _delay =>
+          val w = new DelayWaiter(stmts, param_sig, x.time)
+          lst = w :: lst
         case _ => ()
       }
       hdl.moduleSigMap += (name -> param_sig)
     }
+    lst
   }
 
   def schedule(time: Int, w: Waiter) {
-    println("scheduling %s".format(time))
     futureEvents += ((time, w))
   }
 
   def simulate(maxTime: Int, mods: module*) {
-    println("start wiring!")
-    wire(mods)
-    println("end wiring!")
-    var waiters: List[Waiter] = List()
+    var waiters: List[Waiter] = wire(mods)
     var runtime = 0;
 
+    hdl.siglist = List()
+    println("time = %d".format(runtime))
     val f = () => {
       while (true) {
         for (sig <- hdl.siglist)
           waiters = sig.update() ::: waiters
         hdl.siglist = List()
-        println("waiters: ", waiters)
-        for (waiter <- waiters) {
+                for (waiter <- waiters) {
           val wl = waiter.next()
           wl.foreach(w => w match {
             case x: DelayWaiter =>
@@ -62,14 +64,14 @@ class Simulator(hdl: ScalaHDL){
             case _ => ()
           })
         }
-        println("siglist: ", hdl.siglist)
+        waiters = List()
 
         if (hdl.siglist.isEmpty) {
-          println("future.")
           val spans = futureEvents.span(_._1 == futureEvents.head._1)
           val events = spans._1
           futureEvents = spans._2
           runtime = events.head._1
+          println("time = %d".format(runtime))
           if (maxTime != 0 && runtime > maxTime) return
           if (events.isEmpty) return
             waiters = events.map(_._2).toList
