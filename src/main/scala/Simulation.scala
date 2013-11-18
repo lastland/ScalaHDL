@@ -11,9 +11,9 @@ import scala.collection.mutable.PriorityQueue
 
 class Simulator(hdl: ScalaHDL){
   private var futureEvents: PriorityQueue[(Int, Waiter)] =
-    new PriorityQueue[(Int, Waiter)]()(Ordering[(Int)].on(x => x._1))
+    new PriorityQueue[(Int, Waiter)]()(Ordering[(Int)].on(x => -x._1))
 
-  private def wire(mods: Seq[module]) = {
+  private def wire(mods: Seq[module]): List[Waiter] = {
     hdl.moduleSigMap.clear()
     var lst: List[Waiter] = List()
     for (mod <- mods) {
@@ -42,8 +42,10 @@ class Simulator(hdl: ScalaHDL){
   }
 
   def schedule(time: Int, w: Waiter) {
-    futureEvents += ((time, w))
+    futureEvents enqueue ((time, w))
   }
+
+  private def getFutureEvents = futureEvents
 
   def simulate(maxTime: Int, mods: module*) {
     var waiters: List[Waiter] = wire(mods)
