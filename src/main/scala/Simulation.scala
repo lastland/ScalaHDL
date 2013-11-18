@@ -12,6 +12,12 @@ import scala.collection.mutable.PriorityQueue
 class Simulator(hdl: ScalaHDL){
   private var futureEvents: PriorityQueue[(Int, Waiter)] =
     new PriorityQueue[(Int, Waiter)]()(Ordering[(Int)].on(x => -x._1))
+  private var startRunning: Boolean = false
+  private var runtime = 0
+  private var waiters: List[Waiter] = List()
+
+  private def getFutureEvents = futureEvents
+  def getRunningState = startRunning
 
   private def wire(mods: Seq[module]): List[Waiter] = {
     hdl.moduleSigMap.clear()
@@ -45,41 +51,59 @@ class Simulator(hdl: ScalaHDL){
     futureEvents enqueue ((time, w))
   }
 
-  private def getFutureEvents = futureEvents
+  private def exec (maxTime: Int, wl: List[Waiter]): List[Waiter] = {
+    var waiters = wl
+    while (true) {
+      for (sig <- hdl.siglist)
+        waiters = sig.update() ::: waiters
+      hdl.siglist = List()
+      for (waiter <- waiters) {
+        val wl = waiter.next()
+        wl.foreach(w => w match {
+          case x: DelayWaiter =>
+            schedule(runtime + x.time, x)
+          case _ => ()
+        })
+      }
+      waiters = List()
+
+      if (hdl.siglist.isEmpty) {
+        val spans = futureEvents.span(_._1 == futureEvents.head._1)
+        val events = spans._1
+        futureEvents = spans._2
+        runtime = events.head._1
+        if (maxTime != 0 && runtime > maxTime) return waiters
+        if (events.isEmpty) return waiters
+        waiters = events.map(_._2).toList
+        println("time = %d".format(runtime))
+      }
+    }
+    waiters
+  }
 
   def simulate(maxTime: Int, mods: module*) {
-    var waiters: List[Waiter] = wire(mods)
-    var runtime = 0;
+    // TODO: more appropriate exception
+    if (startRunning) throw new RuntimeException
+    waiters = wire(mods)
+    runtime = 0
+    startRunning = true
 
     hdl.siglist = List()
     println("time = %d".format(runtime))
-    val f = () => {
-      while (true) {
-        for (sig <- hdl.siglist)
-          waiters = sig.update() ::: waiters
-        hdl.siglist = List()
-        for (waiter <- waiters) {
-          val wl = waiter.next()
-          wl.foreach(w => w match {
-            case x: DelayWaiter =>
-              schedule(runtime + x.time, x)
-            case _ => ()
-          })
-        }
-        waiters = List()
+    waiters = exec(maxTime, waiters)
+  }
 
-        if (hdl.siglist.isEmpty) {
-          val spans = futureEvents.span(_._1 == futureEvents.head._1)
-          val events = spans._1
-          futureEvents = spans._2
-          runtime = events.head._1
-          println("time = %d".format(runtime))
-          if (maxTime != 0 && runtime > maxTime) return
-          if (events.isEmpty) return
-            waiters = events.map(_._2).toList
-        }
-      }
-    }
-    f()
+  def continue(maxTime: Int) {
+    // TODO: more appropriate exception
+    if (!startRunning) throw new RuntimeException
+    waiters = exec(runtime + maxTime, waiters)
+  }
+
+  def stop() {
+    // TODO: more appropriate exception
+    if (!startRunning) throw new RuntimeException
+    startRunning = false
+    runtime = 0
+    waiters = List()
   }
 }
