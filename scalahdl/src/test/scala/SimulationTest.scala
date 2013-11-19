@@ -42,7 +42,6 @@ class SimulationTest extends Suite with PrivateMethodTester {
     ))
     for (waiter <- lst) {
       for (kv <- waiter.sigMap) {
-        println(kv)
         kv._1 match {
           case 'q => assert(kv._2 === q)
           case 'd => assert(kv._2 === d)

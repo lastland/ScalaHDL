@@ -9,7 +9,7 @@ import ScalaHDL.Helpers.CoroutineHelper._
 
 import scala.collection.mutable.PriorityQueue
 
-class Simulator(hdl: ScalaHDL){
+class Simulator(hdl: ScalaHDL, mods: Seq[module]){
   private var futureEvents: PriorityQueue[(Int, Waiter)] =
     new PriorityQueue[(Int, Waiter)]()(Ordering[(Int)].on(x => -x._1))
   private var startRunning: Boolean = false
@@ -81,7 +81,7 @@ class Simulator(hdl: ScalaHDL){
     waiters
   }
 
-  def simulate(maxTime: Int, mods: module*) {
+  def simulate(maxTime: Int) {
     // TODO: more appropriate exception
     if (startRunning) throw new RuntimeException
     waiters = wire(mods)

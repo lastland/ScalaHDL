@@ -69,7 +69,7 @@ package Core {
   abstract sealed class HDLObject(hdl: ScalaHDL) {
     def convert(): String
     def exec(sigMap: Map[Symbol, Signal]): Signal = {
-      new Signal(0, 1)
+      new Signal("", 0, 1)
     }
   }
 
@@ -86,7 +86,7 @@ package Core {
     override def exec(sigMap: Map[Symbol, Signal]): Signal = op match {
       case `sub` => val b = a.exec(sigMap)
         // TODO: more bits
-        new Signal(1 - b.value, b.bits)
+        new Signal("", 1 - b.value, b.bits)
       case _ => a.exec(sigMap)
     }
   }
@@ -165,8 +165,10 @@ package Core {
   }
 
   class ScalaHDL {
+    import ScalaHDL.Core.DataType.SignalMaker._
+
     implicit def string2Symbol(s: String) = Symbol(s)
-    implicit def int2Signal(value: => Int) = Signal(value, intBits(value))
+    implicit def int2Signal(value: => Int) = new Signal("", value, intBits(value))
     implicit def int2HDLSignal(value: => Int) = HDLSignal(this, () => int2Signal(value))
     implicit def symbol2Ident(s: Symbol) = HDLIdent(this, s)
     implicit def signal2HDLSignal(s: Signal) = HDLSignal(this, () => s)
@@ -204,9 +206,6 @@ package Core {
     def module(name: Symbol, sigs: Signal*): module =
       new module(name, sigs: _*)
 
-    def Signal(value: Int, bits: Int = 1): Signal =
-      new Signal(value, bits)
-
     object defMod extends Dynamic {
       def applyDynamic(name: String)(params: Symbol*): HDLModule = {
         HDLModule.createModule(hdl, name, params)
@@ -217,5 +216,12 @@ package Core {
       val m = modules(name)
       m.convert(args)
     }
+
+    /*
+     * Simulator class sugar.
+     */
+    import ScalaHDL.Simulation.Simulator
+    def Simulator(hdl: ScalaHDL, mods: module*): Simulator =
+      new Simulator(hdl, mods)
   }
 }
