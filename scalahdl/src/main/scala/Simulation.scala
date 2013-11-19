@@ -51,11 +51,11 @@ class Simulator(hdl: ScalaHDL, mods: Seq[module]){
         log("$var reg %d %s %s $end".format(kv._1.bits, kv._2, kv._1.name))
       for (mod <- mods)
       {
-        log("$scope module %s $end".format(mod.name))
+        log("$scope module %s $end".format(mod.name.name))
         val params = hdl.modules(mod.name).params
         for (param <- params) {
           val sig = hdl.moduleSigMap(mod.name)(param)
-          log("$var reg %d %s %s $end".format(sig.bits, nameMap(sig), param))
+          log("$var reg %d %s %s $end".format(sig.bits, nameMap(sig), param.name))
         }
         log("$upscope $end")
       }
