@@ -30,7 +30,7 @@ object Main extends ScalaHDL {
       module('logic, d, q, clk),
       module('clkGen, clk),
       module('stimulus, d, clk))
-    //sim.trace('logic)
-    sim.simulate(1000)
+    sim.simulate(1000, "dff.vcd")
+    sim.stop()
   }
 }

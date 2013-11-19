@@ -32,7 +32,6 @@ package ScalaHDL.Core.DataType {
       else if (value > next.value)
         lst = negedgeWaiters ::: lst
       _value = next.value
-      println("%s is now %d".format(name, _value))
       lst
     }
   }

@@ -7,9 +7,87 @@ import ScalaHDL.Core._delay
 import ScalaHDL.Core.DataType._
 import ScalaHDL.Helpers.CoroutineHelper._
 
+import java.io.File
+import java.io.FileWriter
+import java.io.BufferedWriter
+import java.util.Date
+import java.util.Locale
+import java.text.SimpleDateFormat
+
+import scala.collection.mutable.HashMap
 import scala.collection.mutable.PriorityQueue
 
+
 class Simulator(hdl: ScalaHDL, mods: Seq[module]){
+
+  object trace {
+    var nameMap: Map[Signal, String] = Map[Signal, String]()
+    var tracing: Boolean = false
+    var file: File = null
+    var writer: BufferedWriter = null
+
+    def start(fileName: String) {
+      nameMap = hdl.sigs.zip((0 until hdl.sigs.size).map("N" + _.toString)).toMap
+
+      file = new File(fileName)
+      writer = new BufferedWriter(new FileWriter(file))
+
+      log(List(
+        "$date",
+        new SimpleDateFormat("    EEE MMM dd HH:mm:ss yyyy", Locale.UK).format(
+          new Date()
+        ),
+        "$end",
+        "$version",
+        "    ScalaHDL 0.0.1",
+        "$end",
+        "$timescale",
+        "    1ns",
+        "$end"
+      ).mkString("\n"))
+
+      log("\n$scope module main $end")
+      for (kv <- nameMap)
+        log("$var reg %d %s %s $end".format(kv._1.bits, kv._2, kv._1.name))
+      for (mod <- mods)
+      {
+        log("$scope module %s $end".format(mod.name))
+        val params = hdl.modules(mod.name).params
+        for (param <- params) {
+          val sig = hdl.moduleSigMap(mod.name)(param)
+          log("$var reg %d %s %s $end".format(sig.bits, nameMap(sig), param))
+        }
+        log("$upscope $end")
+      }
+      log("$upscope $end")
+      log("\n$enddefinitions $end")
+      log("$dumpvars")
+      for (sig <- hdl.sigs) logNew(sig)
+      log("$end")
+    }
+
+    def logNew(sig: Signal) {
+      // TODO: more bits
+      log("b%s %s".format(sig.value.toBinaryString, nameMap(sig)))
+    }
+
+    def stop() {
+      if (file != null && writer != null) {
+        writer.flush()
+        writer.close()
+        file = null
+        writer = null
+      }
+    }
+
+    def log(s: String) {
+      if (file != null && writer != null) {
+        writer.write(s)
+        writer.newLine()
+      }
+    }
+  }
+
   private var futureEvents: PriorityQueue[(Int, Waiter)] =
     new PriorityQueue[(Int, Waiter)]()(Ordering[(Int)].on(x => -x._1))
   private var startRunning: Boolean = false
@@ -29,6 +107,8 @@ class Simulator(hdl: ScalaHDL, mods: Seq[module]){
       val params = hdlmod.params
       val cond = hdl.moduleConds(name)
       val stmts = hdl.moduleStmts(name).reverse
+
+      hdl.sigs ++= sigs
 
       val param_sig = params.zip(sigs).toMap
       cond match {
@@ -54,8 +134,10 @@ class Simulator(hdl: ScalaHDL, mods: Seq[module]){
   private def exec (maxTime: Int, wl: List[Waiter]): List[Waiter] = {
     var waiters = wl
     while (true) {
-      for (sig <- hdl.siglist)
+      for (sig <- hdl.siglist) {
         waiters = sig.update() ::: waiters
+        trace.logNew(sig)
+      }
       hdl.siglist = List()
       for (waiter <- waiters) {
         val wl = waiter.next()
@@ -75,21 +157,22 @@ class Simulator(hdl: ScalaHDL, mods: Seq[module]){
         if (maxTime != 0 && runtime > maxTime) return waiters
         if (events.isEmpty) return waiters
         waiters = events.map(_._2).toList
-        println("time = %d".format(runtime))
+        trace.log("#" + runtime)
       }
     }
     waiters
   }
 
-  def simulate(maxTime: Int) {
+  def simulate(maxTime: Int, fileName: String = "") {
     // TODO: more appropriate exception
     if (startRunning) throw new RuntimeException
     waiters = wire(mods)
     runtime = 0
     startRunning = true
+    if (fileName != "")
+      trace.start(fileName)
 
     hdl.siglist = List()
-    println("time = %d".format(runtime))
     waiters = exec(maxTime, waiters)
   }
 
@@ -105,5 +188,6 @@ class Simulator(hdl: ScalaHDL, mods: Seq[module]){
     startRunning = false
     runtime = 0
     waiters = List()
+    trace.stop()
   }
 }

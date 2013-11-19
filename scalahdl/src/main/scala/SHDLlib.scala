@@ -190,6 +190,7 @@ package Core {
     var currentMod = new HDLModule(hdl, 'notused, List())
     var currentCond: condition = new _nocondition
 
+    var sigs: Set[Signal] = Set()
     var siglist: List[Signal] = List()
 
     def sync(s: => _sync) {
