@@ -30,16 +30,16 @@ class SimulationTest extends Suite with PrivateMethodTester {
    * This test is HDL related.
    */
   def testWire() {
-    val sim = new Simulator(Mod1)
     val wire = PrivateMethod[List[Waiter]]('wire)
-    val q = new Signal(0, 1)
-    val d = new Signal(1, 1)
-    val clk = new Signal(0, 1)
-    val lst = sim invokePrivate wire(List(
-      new module('logic, d, q, clk),
+    val q = new Signal("q", 0, 1)
+    val d = new Signal("d", 1, 1)
+    val clk = new Signal("clk", 0, 1)
+    val mods = List(new module('logic, d, q, clk),
       new module('clkGen, clk),
       new module('stimulus, d, clk)
-    ))
+    )
+    val sim = new Simulator(Mod1, mods)
+    val lst = sim invokePrivate wire(mods)
     for (waiter <- lst) {
       for (kv <- waiter.sigMap) {
         kv._1 match {
@@ -70,7 +70,7 @@ class SimulationTest extends Suite with PrivateMethodTester {
     )
     val expected = lst.sortBy(_._1)
 
-    val sim = new Simulator(Mod1)
+    val sim = new Simulator(Mod1, List())
     for (e <- lst) sim.schedule(e._1, e._2)
 
     val getFuture = PrivateMethod[PriorityQueue[(Int, Waiter)]]('getFutureEvents)
