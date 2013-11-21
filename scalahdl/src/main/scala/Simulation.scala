@@ -168,7 +168,7 @@ class Simulator(hdl: ScalaHDL, mods: Seq[module]){
 
   def simulate(maxTime: Int, fileName: String = "") {
     if (startRunning)
-      throw new SimulatorException("Simulator is already running!")
+      throw SimulatorException("Simulator is already running!")
     waiters = wire(mods)
     nexttime = 0
     startRunning = true
@@ -181,13 +181,13 @@ class Simulator(hdl: ScalaHDL, mods: Seq[module]){
 
   def continue(maxTime: Int) {
     if (!startRunning)
-      throw new SimulatorException("Simulator has not been started!")
+      throw SimulatorException("Simulator has not been started!")
     waiters = exec(now + maxTime, waiters)
   }
 
   def stop() {
     if (!startRunning)
-      throw new SimulatorException("Simulator has not been started!")
+      throw SimulatorException("Simulator has not been started!")
     startRunning = false
     now = 0
     nexttime = 0
