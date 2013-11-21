@@ -97,6 +97,7 @@ class Simulator(hdl: ScalaHDL, mods: Seq[module]){
   private var waiters: List[Waiter] = List()
 
   private def getFutureEvents = futureEvents
+  private def getNow = now
   def getRunningState = startRunning
 
   private def wire(mods: Seq[module]): List[Waiter] = {

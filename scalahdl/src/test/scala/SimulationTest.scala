@@ -62,13 +62,53 @@ class SimulationTest extends Suite with PrivateMethodTester {
       new module('clkGen, clk),
       new module('stimulus, d, clk)
     ))
+
+    val getNow = PrivateMethod[Int]('getNow)
+    var now = 10
     sim.simulate(10)
+    assert((sim invokePrivate getNow()) === 10)
     for (i <- 1 to 100) {
+      now += 10
       sim.continue(10)
       assert(clk === new Signal("clk", 0))
+      assert((sim invokePrivate getNow()) === now)
+      now += 10
       sim.continue(10)
       assert(clk === new Signal("clk", 1))
       assert(q === d)
+      assert((sim invokePrivate getNow()) === now)
+    }
+    sim.stop()
+    // TODO: test with more modules
+  }
+
+  def testRestart() {
+    val q = new Signal("q", 0)
+    val d = new Signal("d", 0)
+    val clk = new Signal("clk", 0)
+    val sim = new Simulator(Mod1, List(
+      new module('logic, d, q, clk),
+      new module('clkGen, clk),
+      new module('stimulus, d, clk)
+    ))
+    sim.simulate(1000)
+    sim.continue(1000)
+    sim.stop()
+
+    val getNow = PrivateMethod[Int]('getNow)
+    var now = 10
+    sim.simulate(10)
+    assert((sim invokePrivate getNow()) === 10)
+    for (i <- 1 to 100) {
+      now += 10
+      sim.continue(10)
+      assert(clk === new Signal("clk", 0))
+      assert((sim invokePrivate getNow()) === now)
+      now += 10
+      sim.continue(10)
+      assert(clk === new Signal("clk", 1))
+      assert(q === d)
+      assert((sim invokePrivate getNow()) === now)
     }
     sim.stop()
     // TODO: test with more modules
