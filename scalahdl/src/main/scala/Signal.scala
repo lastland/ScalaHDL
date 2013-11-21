@@ -8,6 +8,13 @@ package ScalaHDL.Core.DataType {
 
   abstract sealed class HDLDataType
 
+  private object Signal {
+    def getBits(value: Int): Int = {
+      // Some Faster Method?
+      value.toBinaryString.size
+    }
+  }
+
   class Signal(val name: String, var _value: Int, _bits: Int)
       extends HDLDataType {
     var eventWaiters: List[Waiter] = List()
@@ -18,6 +25,16 @@ package ScalaHDL.Core.DataType {
     def bits = _bits
 
     var next: Signal = this
+
+    // TODO: more appropriate exception
+    if (Signal.getBits(_value) > _bits) {
+      println(name, _value, _bits, Signal.getBits(_value))
+      throw new RuntimeException
+    }
+
+    def this(name: String, _value: Int) {
+      this(name, _value, Signal.getBits(_value))
+    }
 
     def addWaiter(w: Waiter, v: Int) {
       if (v == 1) posedgeWaiters = w :: posedgeWaiters
@@ -37,14 +54,22 @@ package ScalaHDL.Core.DataType {
   }
 
   object SignalMaker {
-    def Signal(value: Int, bits: Int): Signal =
-      macro SignalMaker.makeSignalWithName
+    def signal(value: Int): Signal =
+      macro makeSignalWithName1
 
-    def mkSignal(name: String, value: Int, bits: Int): Signal =
+    def signal(value: Int, bits: Int): Signal =
+      macro makeSignalWithName2
+
+    def mkSignal1(name: String, value: Int): Signal =
+      new Signal(name, value)
+
+    def makeSignalWithName1(c: Context)(value: c.Expr[Int]) =
+      makeCallWithName(c, "SignalMaker.mkSignal1")
+
+    def mkSignal2(name: String, value: Int, bits: Int): Signal =
       new Signal(name, value, bits)
 
-    def makeSignalWithName(c: Context)(value: c.Expr[Int], bits: c.Expr[Int]) =
-      makeCallWithName(c, "SignalMaker.mkSignal")
+    def makeSignalWithName2(c: Context)(value: c.Expr[Int], bits: c.Expr[Int]) =
+      makeCallWithName(c, "SignalMaker.mkSignal2")
   }
-
 }

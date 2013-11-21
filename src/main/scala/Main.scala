@@ -23,9 +23,9 @@ object Main extends ScalaHDL {
   }
 
   def main(args: Array[String]) {
-    val q = Signal(0, 1)
-    val d = Signal(1, 1)
-    val clk = Signal(0, 1)
+    val q = signal(0)
+    val d = signal(1)
+    val clk = signal(0)
     val sim = Simulator(this,
       module('logic, d, q, clk),
       module('clkGen, clk),

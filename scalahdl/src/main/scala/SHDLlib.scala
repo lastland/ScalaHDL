@@ -99,6 +99,18 @@ package Core {
       case `mul` => a.convert() + " * " + b.convert()
       case `div` => a.convert() + " / " + b.convert()
     }
+    override def exec(sigMap: Map[Symbol, Signal]): Signal = {
+      val sa = a.exec(sigMap)
+      val sb = b.exec(sigMap)
+      val va = sa.value
+      val vb = sb.value
+      op match {
+        case `add` => new Signal("", va + vb)
+        case `sub` => new Signal("", va - vb)
+        case `mul` => new Signal("", va * vb)
+        case `div` => new Signal("", va / vb)
+      }
+    }
   }
 
   case class HDLAssignment(hdl: ScalaHDL,
@@ -168,16 +180,12 @@ package Core {
     import ScalaHDL.Core.DataType.SignalMaker._
 
     implicit def string2Symbol(s: String) = Symbol(s)
-    implicit def int2Signal(value: => Int) = new Signal("", value, intBits(value))
+    implicit def int2Signal(value: => Int) = new Signal("", value)
     implicit def int2HDLSignal(value: => Int) = HDLSignal(this, () => int2Signal(value))
     implicit def symbol2Ident(s: Symbol) = HDLIdent(this, s)
     implicit def signal2HDLSignal(s: Signal) = HDLSignal(this, () => s)
 
     private val hdl: ScalaHDL = this
-
-    private def intBits(value: Int): Int =
-      if (value == 0) 0
-      else 1 + intBits(value >> 1)
 
     // TODO: Scope?
     val modules = new HashMap[Symbol, HDLModule]
@@ -221,8 +229,7 @@ package Core {
     /*
      * Simulator class sugar.
      */
-    import ScalaHDL.Simulation.Simulator
-    def Simulator(hdl: ScalaHDL, mods: module*): Simulator =
-      new Simulator(hdl, mods)
+    def Simulator(hdl: ScalaHDL, mods: module*): ScalaHDL.Simulation.Simulator =
+      new ScalaHDL.Simulation.Simulator(hdl, mods)
   }
 }
