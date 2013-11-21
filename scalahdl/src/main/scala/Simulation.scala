@@ -92,7 +92,7 @@ class Simulator(hdl: ScalaHDL, mods: Seq[module]){
   private var futureEvents: PriorityQueue[(Int, Waiter)] =
     new PriorityQueue[(Int, Waiter)]()(Ordering[(Int)].on(x => -x._1))
   private var startRunning: Boolean = false
-  private var runtime = 0
+  private var nexttime = 0
   private var now = 0
   private var waiters: List[Waiter] = List()
 
@@ -145,21 +145,21 @@ class Simulator(hdl: ScalaHDL, mods: Seq[module]){
         val wl = waiter.next()
         wl.foreach(w => w match {
           case x: DelayWaiter =>
-            schedule(runtime + x.time, x)
+            schedule(nexttime + x.time, x)
           case _ => ()
         })
       }
-      now = runtime
+      now = nexttime
       waiters = List()
 
       if (hdl.siglist.isEmpty) {
         val spans = futureEvents.span(_._1 == futureEvents.head._1)
         val events = spans._1
         futureEvents = spans._2
-        runtime = events.head._1
+        nexttime = events.head._1
         waiters = events.map(_._2).toList
-        trace.log("#" + runtime)
-        if (maxTime != 0 && runtime > maxTime) return waiters
+        trace.log("#" + nexttime)
+        if (maxTime != 0 && nexttime > maxTime) return waiters
         if (events.isEmpty) return waiters
       }
     }
@@ -170,7 +170,7 @@ class Simulator(hdl: ScalaHDL, mods: Seq[module]){
     // TODO: more appropriate exception
     if (startRunning) throw new RuntimeException
     waiters = wire(mods)
-    runtime = 0
+    nexttime = 0
     startRunning = true
     if (fileName != "")
       trace.start(fileName)
@@ -189,7 +189,8 @@ class Simulator(hdl: ScalaHDL, mods: Seq[module]){
     // TODO: more appropriate exception
     if (!startRunning) throw new RuntimeException
     startRunning = false
-    runtime = 0
+    now = 0
+    nexttime = 0
     waiters = List()
     trace.stop()
   }
