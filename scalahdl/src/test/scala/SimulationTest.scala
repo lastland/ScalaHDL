@@ -114,6 +114,28 @@ class SimulationTest extends Suite with PrivateMethodTester {
     // TODO: test with more modules
   }
 
+  def testIllegalUsage() {
+    val q = new Signal("q", 0)
+    val d = new Signal("d", 0)
+    val clk = new Signal("clk", 0)
+    val sim = new Simulator(Mod1, List(
+      new module('logic, d, q, clk),
+      new module('clkGen, clk),
+      new module('stimulus, d, clk)
+    ))
+    intercept[SimulatorException] {
+      sim.continue(10)
+    }
+    intercept[SimulatorException] {
+      sim.stop()
+    }
+    sim.simulate(10)
+    intercept[SimulatorException] {
+      sim.simulate(10)
+    }
+    sim.stop()
+  }
+
   /*
    * This test is HDL unrelated.
    */

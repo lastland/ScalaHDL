@@ -67,7 +67,6 @@ class Simulator(hdl: ScalaHDL, mods: Seq[module]){
     }
 
     def logNew(sig: Signal) {
-      // TODO: more bits
       if (file != null && writer != null)
         log("b%s %s".format(sig.value.toBinaryString, nameMap(sig)))
     }
@@ -168,8 +167,8 @@ class Simulator(hdl: ScalaHDL, mods: Seq[module]){
   }
 
   def simulate(maxTime: Int, fileName: String = "") {
-    // TODO: more appropriate exception
-    if (startRunning) throw new RuntimeException
+    if (startRunning)
+      throw new SimulatorException("Simulator is already running!")
     waiters = wire(mods)
     nexttime = 0
     startRunning = true
@@ -181,14 +180,14 @@ class Simulator(hdl: ScalaHDL, mods: Seq[module]){
   }
 
   def continue(maxTime: Int) {
-    // TODO: more appropriate exception
-    if (!startRunning) throw new RuntimeException
+    if (!startRunning)
+      throw new SimulatorException("Simulator has not been started!")
     waiters = exec(now + maxTime, waiters)
   }
 
   def stop() {
-    // TODO: more appropriate exception
-    if (!startRunning) throw new RuntimeException
+    if (!startRunning)
+      throw new SimulatorException("Simulator has not been started!")
     startRunning = false
     now = 0
     nexttime = 0
