@@ -68,7 +68,8 @@ class Simulator(hdl: ScalaHDL, mods: Seq[module]){
 
     def logNew(sig: Signal) {
       // TODO: more bits
-      log("b%s %s".format(sig.value.toBinaryString, nameMap(sig)))
+      if (file != null && writer != null)
+        log("b%s %s".format(sig.value.toBinaryString, nameMap(sig)))
     }
 
     def stop() {
@@ -92,6 +93,7 @@ class Simulator(hdl: ScalaHDL, mods: Seq[module]){
     new PriorityQueue[(Int, Waiter)]()(Ordering[(Int)].on(x => -x._1))
   private var startRunning: Boolean = false
   private var runtime = 0
+  private var now = 0
   private var waiters: List[Waiter] = List()
 
   private def getFutureEvents = futureEvents
@@ -131,7 +133,7 @@ class Simulator(hdl: ScalaHDL, mods: Seq[module]){
     futureEvents enqueue ((time, w))
   }
 
-  private def exec (maxTime: Int, wl: List[Waiter]): List[Waiter] = {
+  private def exec(maxTime: Int, wl: List[Waiter]): List[Waiter] = {
     var waiters = wl
     while (true) {
       for (sig <- hdl.siglist) {
@@ -147,6 +149,7 @@ class Simulator(hdl: ScalaHDL, mods: Seq[module]){
           case _ => ()
         })
       }
+      now = runtime
       waiters = List()
 
       if (hdl.siglist.isEmpty) {
@@ -154,10 +157,10 @@ class Simulator(hdl: ScalaHDL, mods: Seq[module]){
         val events = spans._1
         futureEvents = spans._2
         runtime = events.head._1
-        if (maxTime != 0 && runtime > maxTime) return waiters
-        if (events.isEmpty) return waiters
         waiters = events.map(_._2).toList
         trace.log("#" + runtime)
+        if (maxTime != 0 && runtime > maxTime) return waiters
+        if (events.isEmpty) return waiters
       }
     }
     waiters
@@ -179,7 +182,7 @@ class Simulator(hdl: ScalaHDL, mods: Seq[module]){
   def continue(maxTime: Int) {
     // TODO: more appropriate exception
     if (!startRunning) throw new RuntimeException
-    waiters = exec(runtime + maxTime, waiters)
+    waiters = exec(now + maxTime, waiters)
   }
 
   def stop() {

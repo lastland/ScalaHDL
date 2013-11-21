@@ -51,6 +51,15 @@ package ScalaHDL.Core.DataType {
       _value = next.value
       lst
     }
+
+    override def equals(another: Any): Boolean = another match {
+      case x: Signal =>
+        _value == x.value
+      case _ => this == another
+    }
+
+    override def toString(): String =
+      "Signal %s(value = %d, bits = %d)".format(name, _value, _bits)
   }
 
   object SignalMaker {
