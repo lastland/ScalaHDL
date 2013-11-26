@@ -31,7 +31,6 @@ class SimulatorForTest(hdl: ScalaHDL, mods: Seq[module])
 
   case class TestSchedule(startTime: Int, endTime: Int, duration: Int) {
     def run(f: => Unit) {
-      println(this)
       (startTime to endTime by duration).foreach { t =>
         tasks enqueue ((t, () => f))
       }
