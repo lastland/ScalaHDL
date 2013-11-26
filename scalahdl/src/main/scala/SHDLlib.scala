@@ -126,8 +126,7 @@ package Core {
   }
 
   object HDLAssignment {
-    def createAssignment(hdl: ScalaHDL,
-      id: HDLIdent, ob: HDLObject) = {
+    def createAssignment(hdl: ScalaHDL, id: HDLIdent, ob: HDLObject) = {
       val a = HDLAssignment(hdl, id, ob)
       val n = hdl.currentMod.name
       hdl.moduleStmts.update(n, a :: hdl.moduleStmts(n))
@@ -145,6 +144,36 @@ package Core {
     def is(value: Int): _sync = new _sync(name, value)
     override def convert(): String = name.name
     override def exec(sigMap: Map[Symbol, Signal]) = sigMap(name)
+
+    def apply(args: HDLObject*): HDLApply = {
+      HDLApply.createApply(hdl, this, args)
+    }
+  }
+
+  case class HDLApply(hdl: ScalaHDL, modIdent: HDLIdent, args: Seq[HDLObject])
+      extends HDLObject(hdl) {
+    override def convert(): String = "" // Not supported yet!
+    override def exec(sigMap: Map[Symbol, Signal]) = {
+      val modName = modIdent.name
+      if (!hdl.modules.contains(modName))
+        throw new NoSuchModuleException(modName)
+      else {
+        val mod = hdl.modules(modName)
+        val newMap = mod.params.zip(args.map(_.exec(sigMap))).toMap
+        val s = for (stmt <- hdl.moduleStmts(modName))
+          yield stmt.exec(newMap)
+        s.last
+      }
+    }
+  }
+
+  object HDLApply {
+    def createApply(hdl: ScalaHDL, modId: HDLIdent, args: Seq[HDLObject]) = {
+      val a = HDLApply(hdl, modId, args)
+      val n = hdl.currentMod.name
+      hdl.moduleStmts.update(n, a :: hdl.moduleStmts(n))
+      a
+    }
   }
 
   case class HDLSignal(hdl: ScalaHDL, sig: () => Signal) extends HDLObject(hdl) {
@@ -211,6 +240,9 @@ package Core {
 
     def cycle(a: HDLIdent): HDLAssignment =
       HDLAssignment.createAssignment(hdl, a, HDLFunc1(hdl, sub, a))
+
+    def not(a: HDLObject): HDLFunc1 =
+      HDLFunc1(hdl, sub, a)
 
     def module(name: Symbol, sigs: Signal*): module =
       new module(name, sigs: _*)

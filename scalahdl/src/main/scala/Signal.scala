@@ -28,7 +28,6 @@ package ScalaHDL.Core.DataType {
 
     // TODO: more appropriate exception
     if (Signal.getBits(_value) > _bits) {
-      println(name, _value, _bits, Signal.getBits(_value))
       throw new RuntimeException
     }
 
@@ -54,8 +53,11 @@ package ScalaHDL.Core.DataType {
 
     override def equals(another: Any): Boolean = another match {
       case x: Signal =>
-        _value == x.value
-      case _ => this == another
+        // only value, every field, or hashcode?
+        _value == x.value && _bits == x.bits && name == x.name
+      case x: Int =>
+        _value == x
+      case _ => throw new RuntimeException // TODO: more appropriate
     }
 
     override def toString(): String =

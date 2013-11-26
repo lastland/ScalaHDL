@@ -101,6 +101,7 @@ class Simulator(hdl: ScalaHDL, mods: Seq[module]){
 
   private def wire(mods: Seq[module]): List[Waiter] = {
     hdl.moduleSigMap.clear()
+    hdl.sigs = Set()
     var lst: List[Waiter] = List()
     for (mod <- mods) {
       val name = mod.name
@@ -110,7 +111,7 @@ class Simulator(hdl: ScalaHDL, mods: Seq[module]){
       val cond = hdl.moduleConds(name)
       val stmts = hdl.moduleStmts(name).reverse
 
-      hdl.sigs ++= sigs
+      for (sig <- sigs) hdl.sigs = hdl.sigs + sig
 
       val param_sig = params.zip(sigs).toMap
       cond match {

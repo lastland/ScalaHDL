@@ -14,12 +14,16 @@ object Main extends ScalaHDL {
 
   delay(10)
   defMod.clkGen('clk) {
-    cycle('clk)
+    'cycle('clk)
   }
 
   sync('clk is 0)
   defMod.stimulus('d, 'clk) {
     'd := Random.nextInt(2)
+  }
+
+  defMod.cycle('x) {
+    'x := not('x)
   }
 
   def main(args: Array[String]) {

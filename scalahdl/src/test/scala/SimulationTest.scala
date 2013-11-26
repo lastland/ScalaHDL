@@ -75,7 +75,7 @@ class SimulationTest extends Suite with PrivateMethodTester {
       now += 10
       sim.continue(10)
       assert(clk === new Signal("clk", 1))
-      assert(q === d)
+      assert(q.value === d.value)
       assert((sim invokePrivate getNow()) === now)
     }
     sim.stop()
@@ -102,12 +102,12 @@ class SimulationTest extends Suite with PrivateMethodTester {
     for (i <- 1 to 100) {
       now += 10
       sim.continue(10)
-      assert(clk === new Signal("clk", 0))
+      assert(clk === 0)
       assert((sim invokePrivate getNow()) === now)
       now += 10
       sim.continue(10)
-      assert(clk === new Signal("clk", 1))
-      assert(q === d)
+      assert(clk === 1)
+      assert(q.value === d.value)
       assert((sim invokePrivate getNow()) === now)
     }
     sim.stop()
