@@ -26,9 +26,9 @@ package ScalaHDL.Core.DataType {
 
     var next: Signal = this
 
-    // TODO: more appropriate exception
     if (Signal.getBits(_value) > _bits) {
-      throw new RuntimeException
+      throw new NotEnoughBitsException(
+        name, _value, Signal.getBits(_value), _bits)
     }
 
     def this(name: String, _value: Int) {
@@ -57,7 +57,8 @@ package ScalaHDL.Core.DataType {
         _value == x.value && _bits == x.bits && name == x.name
       case x: Int =>
         _value == x
-      case _ => throw new RuntimeException // TODO: more appropriate
+      case _ => throw new RuntimeException(
+        "comparing Signal with unsupported data type")
     }
 
     override def toString(): String =
