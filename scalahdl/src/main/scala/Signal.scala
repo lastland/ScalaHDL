@@ -3,6 +3,7 @@ import scala.reflect.macros.Context
 import org.bitbucket.inkytonik.dsinfo.DSInfo.makeCallWithName
 
 import ScalaHDL.Simulation.Waiter
+import ScalaHDL.Core.NotEnoughBitsException
 
 package ScalaHDL.Core.DataType {
 

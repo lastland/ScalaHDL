@@ -16,4 +16,4 @@ class NotEnoughBitsException(
   sigName: String, value: Int, expected: Int, defacto: Int)
     extends HDLException(
   "not enough bits to hold value %d in %s, require %d, get %d".format(
-    value, sigName, expected, defactor))
+    value, sigName, expected, defacto))

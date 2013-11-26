@@ -1,4 +1,4 @@
-package ScalaHDL
+package ScalaHDLExample.FlipFlop
 import scala.util.Random
 
 import ScalaHDL.Core.ScalaHDL

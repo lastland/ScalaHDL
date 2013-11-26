@@ -136,6 +136,7 @@ class Simulator(hdl: ScalaHDL, mods: Seq[module]){
 
   private def exec(maxTime: Int, wl: List[Waiter]): List[Waiter] = {
     var waiters = wl
+    if (maxTime == 0) return waiters
     while (true) {
       for (sig <- hdl.siglist) {
         waiters = sig.update() ::: waiters
@@ -160,7 +161,7 @@ class Simulator(hdl: ScalaHDL, mods: Seq[module]){
         nexttime = events.head._1
         waiters = events.map(_._2).toList
         trace.log("#" + nexttime)
-        if (maxTime != 0 && nexttime > maxTime) return waiters
+        if (nexttime > maxTime) return waiters
         if (events.isEmpty) return waiters
       }
     }
