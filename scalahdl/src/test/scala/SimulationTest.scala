@@ -40,6 +40,7 @@ class SimulationTest extends Suite with PrivateMethodTester {
     )
     val sim = new Simulator(Mod1, mods)
     val lst = sim invokePrivate wire(mods)
+    assert(Mod1.sigs.size === 3)
     for (waiter <- lst) {
       for (kv <- waiter.sigMap) {
         kv._1 match {
