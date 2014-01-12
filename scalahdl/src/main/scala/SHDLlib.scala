@@ -69,7 +69,7 @@ package Core {
   abstract sealed class HDLObject(hdl: ScalaHDL) {
     def convert(): String
     def exec(sigMap: Map[Symbol, Signal]): Signal = {
-      new Signal("", 0, 1)
+      new Bool("", 0)
     }
   }
 
@@ -86,7 +86,7 @@ package Core {
     override def exec(sigMap: Map[Symbol, Signal]): Signal = op match {
       case `sub` => val b = a.exec(sigMap)
         // TODO: more bits
-        new Signal("", 1 - b.value, b.bits)
+        b.opposite
       case _ => a.exec(sigMap)
     }
   }
@@ -105,10 +105,10 @@ package Core {
       val va = sa.value
       val vb = sb.value
       op match {
-        case `add` => new Signal("", va + vb)
-        case `sub` => new Signal("", va - vb)
-        case `mul` => new Signal("", va * vb)
-        case `div` => new Signal("", va / vb)
+        case `add` => sa + sb
+        case `sub` => sa - sb
+        case `mul` => sa * sb
+        case `div` => sa / sb
       }
     }
   }
@@ -206,10 +206,10 @@ package Core {
   }
 
   class ScalaHDL {
-    import ScalaHDL.Core.DataType.SignalMaker._
+    import ScalaHDL.Core.DataType.Signals._
 
     implicit def string2Symbol(s: String) = Symbol(s)
-    implicit def int2Signal(value: => Int) = new Signal("", value)
+    implicit def int2Signal(value: => Int) = new Signed("", value)
     implicit def int2HDLSignal(value: => Int) = HDLSignal(this, () => int2Signal(value))
     implicit def symbol2Ident(s: Symbol) = HDLIdent(this, s)
     implicit def signal2HDLSignal(s: Signal) = HDLSignal(this, () => s)

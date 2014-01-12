@@ -3,7 +3,7 @@ import scala.util.Random
 
 import ScalaHDL.Core.ScalaHDL
 import ScalaHDL.Core.DataType._
-import ScalaHDL.Core.DataType.SignalMaker._
+import ScalaHDL.Core.DataType.Signals._
 import ScalaHDL.Simulation.Simulator
 
 object Main extends ScalaHDL {
@@ -27,9 +27,9 @@ object Main extends ScalaHDL {
   }
 
   def main(args: Array[String]) {
-    val q = signal(0)
-    val d = signal(1)
-    val clk = signal(0)
+    val q = bool(0)
+    val d = bool(1)
+    val clk = bool(0)
     val sim = Simulator(this,
       module('logic, d, q, clk),
       module('clkGen, clk),
