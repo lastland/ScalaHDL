@@ -5,6 +5,9 @@ class HDLException(stmt: String) extends Exception(stmt)
 class NoSuchModuleException(modName: Symbol)
     extends HDLException(List("module", modName.name, "not found!").mkString(" "))
 
+class NoSuchIdentException(idtName: Symbol)
+    extends HDLException("HDLIdent %s is not declared!".format(idtName.name))
+
 class WrongNumberOfArgumentsException(
   modName: Symbol, expected: Int, defacto: Int)
     extends HDLException(List(

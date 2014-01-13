@@ -10,21 +10,21 @@ object Main extends ScalaHDL {
   val DES = 1
 
   defMod.compare('a, 'b, 'x, 'y, 'dir) {
-    when ('dir == ASC) {
-      if ('a > 'b) {
+    if ('dir == ASC) {
+      when ('a > 'b) {
         'x := 'b
         'y := 'a
       }
-      else {
+      .otherwise {
         'x := 'a
         'y := 'b
       }
-    } elsewhen {
-      if ('a > 'b) {
+    } else {
+      when ('a > 'b) {
         'x := 'a
         'y := 'b
       }
-      else {
+      .otherwise {
         'x := 'b
         'y := 'a
       }
@@ -37,15 +37,15 @@ object Main extends ScalaHDL {
     'z := List('z0, 'z1, 'z2, 'z3, 'z4, 'z5, 'z6, 'z7)
 
     defFunc.bitonicMerge('a, 'z, 'dir) {
-      'n := 'a("size")
+      'n := 'a("size")()
       'k := 'n / 2
       if ('n > 1) {
         't := (for (i <- 0 to 'k) yield bool(0))
         for (i <- 0 to 'k) {
           'compare('a(i), 'a(i + 'k), 't(i), 't(i + 'k))
         }
-        'bitonicMerge('t("take")(k), z("take")(k), 'dir)
-        'bitonicMerge('t("drop")(k), z("drop")(k), 'dir)
+        'bitonicMerge('t("take")('k), 'z("take")('k), 'dir)
+        'bitonicMerge('t("drop")('k), 'z("drop")('k), 'dir)
       }
       else {
         'z := 'a
@@ -53,12 +53,12 @@ object Main extends ScalaHDL {
     }
 
     defFunc.bitonicSort('a, 'z, 'dir) {
-      'n := 'a("size")
+      'n := 'a("size")()
       'k := 'n / 2
       if ('n > 1) {
-        't = (for (i <- 0 to 'k) yield bool(0))
-        'bitonicSort('a("take")(k), z("take")(k), ASC)
-        'bitonicSort('a("drop")(k), z("drop")(k), DES)
+        't := (for (i <- 0 to 'k) yield bool(0))
+        'bitonicSort('a("take")('k), 'z("take")('k), ASC)
+        'bitonicSort('a("drop")('k), 'z("drop")('k), DES)
         'bitonicMerge('t, 'z, 'dir)
       }
     }
