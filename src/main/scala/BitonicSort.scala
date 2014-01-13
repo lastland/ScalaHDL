@@ -10,7 +10,7 @@ object Main extends ScalaHDL {
   val DES = 1
 
   defMod.compare('a, 'b, 'x, 'y, 'dir) {
-    if ('dir == ASC) {
+    when ('dir == ASC) {
       if ('a > 'b) {
         'x := 'b
         'y := 'a
@@ -19,7 +19,7 @@ object Main extends ScalaHDL {
         'x := 'a
         'y := 'b
       }
-    } else {
+    } elsewhen {
       if ('a > 'b) {
         'x := 'a
         'y := 'b
@@ -33,37 +33,36 @@ object Main extends ScalaHDL {
 
   defMod.sort8('a0, 'a1, 'a2, 'a3, 'a4, 'a5, 'a6, 'a7,
     'z0, 'z1, 'z2, 'z3, 'z4, 'z5, 'z6, 'z7) {
-    val a = List('a0, 'a1, 'a2, 'a3, 'a4, 'a5, 'a6, 'a7)
-    val z = List('z0, 'z1, 'z2, 'z3, 'z4, 'z5, 'z6, 'z7)
+    'a := List('a0, 'a1, 'a2, 'a3, 'a4, 'a5, 'a6, 'a7)
+    'z := List('z0, 'z1, 'z2, 'z3, 'z4, 'z5, 'z6, 'z7)
 
-    defFunc.bitonicMerge(a, z, dir) {
-      val n = a.size
-      val k = n / 2
-      if (n > 1) {
-        val t = (for (i <- 0 to k) yield bool(0))
-        for (i <- 0 to k) {
-          'compare(a(i), a(i + k), t(i), t(i + k))
+    defFunc.bitonicMerge('a, 'z, 'dir) {
+      'n := 'a("size")
+      'k := 'n / 2
+      if ('n > 1) {
+        't := (for (i <- 0 to 'k) yield bool(0))
+        for (i <- 0 to 'k) {
+          'compare('a(i), 'a(i + 'k), 't(i), 't(i + 'k))
         }
-        'bitonicMerge(t.take(k), z.take(k), dir)
-        'bitonicMerge(t.drop(k), z.drop(k), dir)
+        'bitonicMerge('t("take")(k), z("take")(k), 'dir)
+        'bitonicMerge('t("drop")(k), z("drop")(k), 'dir)
       }
       else {
         'z := 'a
       }
     }
 
-    defFunc.bitonicSort(a, z, dir) {
-      val n = a.size
-      val k = n / 2
-      if (n > 1) {
-        val t = (for (i <- 0 to k) yield bool(0))
-        'bitonicSort(a.take(k), z.take(k), ASC)
-        'bitonicSort(a.drop(k), z.drop(k), DES)
-        'bitonicMerge(t, z, dir)
+    defFunc.bitonicSort('a, 'z, 'dir) {
+      'n := 'a("size")
+      'k := 'n / 2
+      if ('n > 1) {
+        't = (for (i <- 0 to 'k) yield bool(0))
+        'bitonicSort('a("take")(k), z("take")(k), ASC)
+        'bitonicSort('a("drop")(k), z("drop")(k), DES)
+        'bitonicMerge('t, 'z, 'dir)
       }
     }
-
-    'bitonicSort(a, z, ASC)
+    'bitonicSort('a, 'z, ASC)
   }
 
   def main(args: Array[String]) {
