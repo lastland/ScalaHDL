@@ -78,7 +78,6 @@ package Core {
     }
     override def exec(sigMap: Map[Symbol, Signal]): Signal = op match {
       case `sub` => val b = a.exec(sigMap)
-        // TODO: more bits
         b.opposite
       case _ => a.exec(sigMap)
     }
@@ -142,11 +141,167 @@ package Core {
     def *(other: HDLObject) = HDLFunc2(hdl, mul, this, other)
     def /(other: HDLObject) = HDLFunc2(hdl, div, this, other)
 
+    def +(other: Int) = {
+      getValue match {
+        case x: Int => x + other
+        case x: Long => x + other
+        case x: Short => x + other
+        case x: Float => x + other
+        case x: Double => x + other
+        case x: Char => x + other
+        case x: Byte => x + other
+        case _ =>
+          val res = invokeMethod("+", getTable, other)
+          res match {
+            case r: Boolean => r
+            case _ => throw new RuntimeException(
+              "the + method of %s should result in a Boolean!")
+          }
+      }
+    }
+
     def <(other: HDLObject) = HDLJudgement(hdl, lt, this, other)
     def <=(other: HDLObject) = HDLJudgement(hdl, let, this, other)
     def ==(other: HDLObject) = HDLJudgement(hdl, eqt, this, other)
     def >=(other: HDLObject) = HDLJudgement(hdl, get, this, other)
     def >(other: HDLObject) = HDLJudgement(hdl, gt, this, other)
+
+    // The following code is awful here,
+    // how to reduce LOC in this part?
+    def <(other: Int): Boolean = {
+      getValue match {
+        // because value class are not real class in Scala,
+        // so you can't get real type using runtime reflection.
+        case x: Int => x < other
+        case x: Long => x < other
+        case x: Short => x < other
+        case x: Float => x < other
+        case x: Double => x < other
+        case x: Char => x < other
+        case x: Byte => x < other
+        case _ =>
+          val res = invokeMethod("<", getTable, other)
+          res match {
+            case r: Boolean => r
+            case _ => throw new RuntimeException(
+              "the < method of %s should result in a Boolean!")
+          }
+      }
+    }
+
+    def <(other: Long): Boolean = {
+      getValue match {
+        case x: Int => x < other
+        case x: Long => x < other
+        case x: Short => x < other
+        case x: Float => x < other
+        case x: Double => x < other
+        case x: Char => x < other
+        case x: Byte => x < other
+        case _ =>
+          val res = invokeMethod("<", getTable, other)
+          res match {
+            case r: Boolean => r
+            case _ => throw new RuntimeException(
+              "the < method of %s should result in a Boolean!")
+          }
+      }
+    }
+
+    def <(other: Short): Boolean = {
+      getValue match {
+        case x: Int => x < other
+        case x: Long => x < other
+        case x: Short => x < other
+        case x: Float => x < other
+        case x: Double => x < other
+        case x: Char => x < other
+        case x: Byte => x < other
+        case _ =>
+          val res = invokeMethod("<", getTable, other)
+          res match {
+            case r: Boolean => r
+            case _ => throw new RuntimeException(
+              "the < method of %s should result in a Boolean!")
+          }
+      }
+    }
+
+    def <(other: Float): Boolean = {
+      getValue match {
+        case x: Int => x < other
+        case x: Long => x < other
+        case x: Short => x < other
+        case x: Float => x < other
+        case x: Double => x < other
+        case x: Char => x < other
+        case x: Byte => x < other
+        case _ =>
+          val res = invokeMethod("<", getTable, other)
+          res match {
+            case r: Boolean => r
+            case _ => throw new RuntimeException(
+              "the < method of %s should result in a Boolean!")
+          }
+      }
+    }
+
+    def <(other: Double): Boolean = {
+      getValue match {
+        case x: Int => x < other
+        case x: Long => x < other
+        case x: Short => x < other
+        case x: Float => x < other
+        case x: Double => x < other
+        case x: Char => x < other
+        case x: Byte => x < other
+        case _ =>
+          val res = invokeMethod("<", getTable, other)
+          res match {
+            case r: Boolean => r
+            case _ => throw new RuntimeException(
+              "the < method of %s should result in a Boolean!")
+          }
+      }
+    }
+
+    def <(other: Char): Boolean = {
+      getValue match {
+        case x: Int => x < other
+        case x: Long => x < other
+        case x: Short => x < other
+        case x: Float => x < other
+        case x: Double => x < other
+        case x: Char => x < other
+        case x: Byte => x < other
+        case _ =>
+          val res = invokeMethod("<", getTable, other)
+          res match {
+            case r: Boolean => r
+            case _ => throw new RuntimeException(
+              "the < method of %s should result in a Boolean!")
+          }
+      }
+    }
+
+    def <(other: Byte): Boolean = {
+      getValue match {
+        case x: Int => x < other
+        case x: Long => x < other
+        case x: Short => x < other
+        case x: Float => x < other
+        case x: Double => x < other
+        case x: Char => x < other
+        case x: Byte => x < other
+        case _ =>
+          val res = invokeMethod("<", getTable, other)
+          res match {
+            case r: Boolean => r
+            case _ => throw new RuntimeException(
+              "the < method of %s should result in a Boolean!")
+          }
+      }
+    }
 
     def <(other: Any): Boolean = {
       val res = invokeMethod("<", getTable, other)
@@ -154,6 +309,139 @@ package Core {
         case r: Boolean => r
         case _ => throw new RuntimeException(
           "the < method of %s should result in a Boolean!")
+      }
+    }
+
+    def <=(other: Int): Boolean = {
+      getValue match {
+        case x: Int => x <= other
+        case x: Long => x <= other
+        case x: Short => x <= other
+        case x: Float => x <= other
+        case x: Double => x <= other
+        case x: Char => x <= other
+        case x: Byte => x <= other
+        case _ =>
+          val res = invokeMethod("<=", getTable, other)
+          res match {
+            case r: Boolean => r
+            case _ => throw new RuntimeException(
+              "the <= method of %s should result in a Boolean!")
+          }
+      }
+    }
+
+    def <=(other: Long): Boolean = {
+      getValue match {
+        case x: Int => x <= other
+        case x: Long => x <= other
+        case x: Short => x <= other
+        case x: Float => x <= other
+        case x: Double => x <= other
+        case x: Char => x <= other
+        case x: Byte => x <= other
+        case _ =>
+          val res = invokeMethod("<=", getTable, other)
+          res match {
+            case r: Boolean => r
+            case _ => throw new RuntimeException(
+              "the <= method of %s should result in a Boolean!")
+          }
+      }
+    }
+
+    def <=(other: Short): Boolean = {
+      getValue match {
+        case x: Int => x <= other
+        case x: Long => x <= other
+        case x: Short => x <= other
+        case x: Float => x <= other
+        case x: Double => x <= other
+        case x: Char => x <= other
+        case x: Byte => x <= other
+        case _ =>
+          val res = invokeMethod("<=", getTable, other)
+          res match {
+            case r: Boolean => r
+            case _ => throw new RuntimeException(
+              "the <= method of %s should result in a Boolean!")
+          }
+      }
+    }
+
+    def <=(other: Float): Boolean = {
+      getValue match {
+        case x: Int => x <= other
+        case x: Long => x <= other
+        case x: Short => x <= other
+        case x: Float => x <= other
+        case x: Double => x <= other
+        case x: Char => x <= other
+        case x: Byte => x <= other
+        case _ =>
+          val res = invokeMethod("<=", getTable, other)
+          res match {
+            case r: Boolean => r
+            case _ => throw new RuntimeException(
+              "the <= method of %s should result in a Boolean!")
+          }
+      }
+    }
+
+    def <=(other: Double): Boolean = {
+      getValue match {
+        case x: Int => x <= other
+        case x: Long => x <= other
+        case x: Short => x <= other
+        case x: Float => x <= other
+        case x: Double => x <= other
+        case x: Char => x <= other
+        case x: Byte => x <= other
+        case _ =>
+          val res = invokeMethod("<=", getTable, other)
+          res match {
+            case r: Boolean => r
+            case _ => throw new RuntimeException(
+              "the <= method of %s should result in a Boolean!")
+          }
+      }
+    }
+
+    def <=(other: Char): Boolean = {
+      getValue match {
+        case x: Int => x <= other
+        case x: Long => x <= other
+        case x: Short => x <= other
+        case x: Float => x <= other
+        case x: Double => x <= other
+        case x: Char => x <= other
+        case x: Byte => x <= other
+        case _ =>
+          val res = invokeMethod("<=", getTable, other)
+          res match {
+            case r: Boolean => r
+            case _ => throw new RuntimeException(
+              "the <= method of %s should result in a Boolean!")
+          }
+      }
+    }
+
+    def <=(other: Byte): Boolean = {
+      getValue match {
+        case x: Int => x <= other
+        case x: Long => x <= other
+        case x: Short => x <= other
+        case x: Float => x <= other
+        case x: Double => x <= other
+        case x: Char => x <= other
+        case x: Byte => x <= other
+        case _ =>
+          val res = invokeMethod("<=", getTable, other)
+          res match {
+            case r: Boolean => r
+            case _ => throw new RuntimeException(
+              "the <= method of %s should result in a Boolean!")
+          }
       }
     }
 
@@ -175,12 +463,278 @@ package Core {
       }
     }
 
+    def >(other: Int): Boolean = {
+      getValue match {
+        case x: Int => x > other
+        case x: Long => x > other
+        case x: Short => x > other
+        case x: Float => x > other
+        case x: Double => x > other
+        case x: Char => x > other
+        case x: Byte => x > other
+        case _ =>
+          val res = invokeMethod(">", getTable, other)
+          res match {
+            case r: Boolean => r
+            case _ => throw new RuntimeException(
+              "the > method of %s should result in a Boolean!")
+          }
+      }
+    }
+
+    def >(other: Long): Boolean = {
+      getValue match {
+        case x: Int => x > other
+        case x: Long => x > other
+        case x: Short => x > other
+        case x: Float => x > other
+        case x: Double => x > other
+        case x: Char => x > other
+        case x: Byte => x > other
+        case _ =>
+          val res = invokeMethod(">", getTable, other)
+          res match {
+            case r: Boolean => r
+            case _ => throw new RuntimeException(
+              "the > method of %s should result in a Boolean!")
+          }
+      }
+    }
+
+    def >(other: Short): Boolean = {
+      getValue match {
+        case x: Int => x > other
+        case x: Long => x > other
+        case x: Short => x > other
+        case x: Float => x > other
+        case x: Double => x > other
+        case x: Char => x > other
+        case x: Byte => x > other
+        case _ =>
+          val res = invokeMethod(">", getTable, other)
+          res match {
+            case r: Boolean => r
+            case _ => throw new RuntimeException(
+              "the > method of %s should result in a Boolean!")
+          }
+      }
+    }
+
+    def >(other: Float): Boolean = {
+      getValue match {
+        case x: Int => x > other
+        case x: Long => x > other
+        case x: Short => x > other
+        case x: Float => x > other
+        case x: Double => x > other
+        case x: Char => x > other
+        case x: Byte => x > other
+        case _ =>
+          val res = invokeMethod(">", getTable, other)
+          res match {
+            case r: Boolean => r
+            case _ => throw new RuntimeException(
+              "the > method of %s should result in a Boolean!")
+          }
+      }
+    }
+
+    def >(other: Double): Boolean = {
+      getValue match {
+        case x: Int => x > other
+        case x: Long => x > other
+        case x: Short => x > other
+        case x: Float => x > other
+        case x: Double => x > other
+        case x: Char => x > other
+        case x: Byte => x > other
+        case _ =>
+          val res = invokeMethod(">", getTable, other)
+          res match {
+            case r: Boolean => r
+            case _ => throw new RuntimeException(
+              "the > method of %s should result in a Boolean!")
+          }
+      }
+    }
+
+    def >(other: Char): Boolean = {
+      getValue match {
+        case x: Int => x > other
+        case x: Long => x > other
+        case x: Short => x > other
+        case x: Float => x > other
+        case x: Double => x > other
+        case x: Char => x > other
+        case x: Byte => x > other
+        case _ =>
+          val res = invokeMethod(">", getTable, other)
+          res match {
+            case r: Boolean => r
+            case _ => throw new RuntimeException(
+              "the > method of %s should result in a Boolean!")
+          }
+      }
+    }
+
+    def >(other: Byte): Boolean = {
+      getValue match {
+        case x: Int => x > other
+        case x: Long => x > other
+        case x: Short => x > other
+        case x: Float => x > other
+        case x: Double => x > other
+        case x: Char => x > other
+        case x: Byte => x > other
+        case _ =>
+          val res = invokeMethod(">", getTable, other)
+          res match {
+            case r: Boolean => r
+            case _ => throw new RuntimeException(
+              "the > method of %s should result in a Boolean!")
+          }
+      }
+    }
+
     def >(other: Any): Boolean = {
       val res = invokeMethod(">", getTable, other)
       res match {
         case r: Boolean => r
         case _ => throw new RuntimeException(
           "the > method of %s should result in a Boolean!")
+      }
+    }
+
+    def >=(other: Int): Boolean = {
+      getValue match {
+        case x: Int => x >= other
+        case x: Long => x >= other
+        case x: Short => x >= other
+        case x: Float => x >= other
+        case x: Double => x >= other
+        case x: Char => x >= other
+        case x: Byte => x >= other
+        case _ =>
+          val res = invokeMethod(">=", getTable, other)
+          res match {
+            case r: Boolean => r
+            case _ => throw new RuntimeException(
+              "the >= method of %s should result in a Boolean!")
+          }
+      }
+    }
+
+    def >=(other: Long): Boolean = {
+      getValue match {
+        case x: Int => x >= other
+        case x: Long => x >= other
+        case x: Short => x >= other
+        case x: Float => x >= other
+        case x: Double => x >= other
+        case x: Char => x >= other
+        case x: Byte => x >= other
+        case _ =>
+          val res = invokeMethod(">=", getTable, other)
+          res match {
+            case r: Boolean => r
+            case _ => throw new RuntimeException(
+              "the >= method of %s should result in a Boolean!")
+          }
+      }
+    }
+
+    def >=(other: Short): Boolean = {
+      getValue match {
+        case x: Int => x >= other
+        case x: Long => x >= other
+        case x: Short => x >= other
+        case x: Float => x >= other
+        case x: Double => x >= other
+        case x: Char => x >= other
+        case x: Byte => x >= other
+        case _ =>
+          val res = invokeMethod(">=", getTable, other)
+          res match {
+            case r: Boolean => r
+            case _ => throw new RuntimeException(
+              "the >= method of %s should result in a Boolean!")
+          }
+      }
+    }
+
+    def >=(other: Float): Boolean = {
+      getValue match {
+        case x: Int => x >= other
+        case x: Long => x >= other
+        case x: Short => x >= other
+        case x: Float => x >= other
+        case x: Double => x >= other
+        case x: Char => x >= other
+        case x: Byte => x >= other
+        case _ =>
+          val res = invokeMethod(">=", getTable, other)
+          res match {
+            case r: Boolean => r
+            case _ => throw new RuntimeException(
+              "the >= method of %s should result in a Boolean!")
+          }
+      }
+    }
+
+    def >=(other: Double): Boolean = {
+      getValue match {
+        case x: Int => x >= other
+        case x: Long => x >= other
+        case x: Short => x >= other
+        case x: Float => x >= other
+        case x: Double => x >= other
+        case x: Char => x >= other
+        case x: Byte => x >= other
+        case _ =>
+          val res = invokeMethod(">=", getTable, other)
+          res match {
+            case r: Boolean => r
+            case _ => throw new RuntimeException(
+              "the >= method of %s should result in a Boolean!")
+          }
+      }
+    }
+
+    def >=(other: Char): Boolean = {
+      getValue match {
+        case x: Int => x >= other
+        case x: Long => x >= other
+        case x: Short => x >= other
+        case x: Float => x >= other
+        case x: Double => x >= other
+        case x: Char => x >= other
+        case x: Byte => x >= other
+        case _ =>
+          val res = invokeMethod(">=", getTable, other)
+          res match {
+            case r: Boolean => r
+            case _ => throw new RuntimeException(
+              "the >= method of %s should result in a Boolean!")
+          }
+      }
+    }
+
+    def >=(other: Byte): Boolean = {
+      getValue match {
+        case x: Int => x >= other
+        case x: Long => x >= other
+        case x: Short => x >= other
+        case x: Float => x >= other
+        case x: Double => x >= other
+        case x: Char => x >= other
+        case x: Byte => x >= other
+        case _ =>
+          val res = invokeMethod(">=", getTable, other)
+          res match {
+            case r: Boolean => r
+            case _ => throw new RuntimeException(
+              "the >= method of %s should result in a Boolean!")
+          }
       }
     }
 
@@ -208,20 +762,36 @@ package Core {
     override def convert(symTab: Map[Symbol, Any]): String = name.name
     override def exec(sigMap: Map[Symbol, Signal]) = sigMap(name)
 
+    private def argTranslate(arg: Any): Any = arg match {
+      case x: HDLIdent => x.getValue
+      case _ => arg
+    }
+
     // Unfortunately, Dynamic class doesn't work well with implicit conversion,
     // We have to take this awful approach instead for now.
     def apply(funcName: String)(args: Any*): Any = {
       val m = getTable
-      invokeMethod(funcName, m, args:_*)
+      val a: Seq[Any] = for (arg <- args) yield argTranslate(arg)
+      invokeMethod(funcName, m, a:_*)
     }
 
-    def apply(args: Any*): HDLApply = {
+    def apply(args: Any*) = {
       //HDLApply.createApply(hdl, this, args)
-      null
+      if (hdl.blocks.contains(name)) {
+        val blk = hdl.blocks(name)
+        blk match {
+          case m: HDLModule =>
+            hdl.currentBlock.top.addStmt(
+              HDLApply(hdl, this, args.asInstanceOf[Seq[HDLObject]]))
+          case f: HDLFuncBlock =>
+            f.applyFunc(args)
+        }
+      } else if (getTable.contains(name)) {
+      }
     }
 
     private def getTable: HashMap[Symbol, Any] =
-      hdl.currentBlock.top.symTab
+      hdl.currentFrame.top
 
     def getValue: Any =
       getTable(name)
@@ -249,6 +819,8 @@ package Core {
       args: Any*):
         Any = {
       val (im, mm) = getInstanceAndMethod(funcName, symTab)
+      println(im)
+      println(mm)
       if (!testMethodValid(im, mm)) throw new NoSuchMethodException(
         "no such method called %s of %s".format(funcName, name))
       im.reflectMethod(mm.asMethod)(args:_*)
@@ -277,8 +849,6 @@ package Core {
       extends HDLObject(hdl) {
     protected var _content: List[HDLObject] = List()
 
-    val symTab = new HashMap[Symbol, Any]
-
     val argsMap = new HashMap[Symbol, ArgInfo]
 
     def content = _content.reverse
@@ -288,14 +858,16 @@ package Core {
     }
 
     def addSymbolBinding(k: Symbol, v: Any) {
-      symTab += (k -> v)
+      val m = hdl.currentFrame.top
+      if (m.contains(k))
+        m(k) = v
+      else
+        m += (k -> v)
     }
 
-    protected def preAction() {
-    }
+    protected def preAction() { }
 
-    protected def postAction() {
-    }
+    protected def postAction() { }
 
     def extract() {
       if (_content.isEmpty) {
@@ -317,9 +889,6 @@ package Core {
           val info = pair._2
           argsMap += (pair._1 -> ArgInfo(info.name, info.tpe, input, info.size))
         }
-        for (pair <- hdl.currentBlock.top.symTab) {
-          symTab += pair
-        }
       }
     }
 
@@ -340,11 +909,53 @@ package Core {
     override def exec(sigMap: Map[Symbol, Signal]) = null
   }
 
-  class HDLFuncBlock(hdl: ScalaHDL, name: String, func: () => Unit)
+  object HDLFuncBlock {
+    def createFuncBlock(hdl: ScalaHDL, name: Symbol, args: Seq[Symbol],
+      func: () => Unit): HDLFuncBlock = {
+      val b = new HDLFuncBlock(hdl, name, args, func)
+      hdl.blocks += (name -> b)
+      b
+    }
+  }
+
+  class HDLFuncBlock(hdl: ScalaHDL, name: Symbol, params: Seq[Symbol],
+    func: () => Unit)
       extends HDLBlock(hdl, func) {
+    private def symTab = new HashMap[Symbol, Any]
+
     // TODO: implement!
     override def convert(symTab: Map[Symbol, Any]): String = ""
     override def exec(sigMap: Map[Symbol, Signal]) = null
+
+    override def preAction() {
+      val m = new HashMap[Symbol, Any]()
+      if (!hdl.currentFrame.isEmpty) {
+        for (pair <- hdl.currentFrame.top) {
+          m += pair
+        }
+      }
+      for (pair <- symTab) {
+        if (m.contains(pair._1)) {
+          m(pair._1) = pair._2
+        } else {
+          m += pair
+        }
+      }
+      hdl.currentFrame.push(m)
+    }
+
+    override def postAction() {
+      hdl.currentFrame.pop()
+    }
+
+    def applyFunc(args: Seq[Any]) {
+      if (params.size != args.size)
+        throw new WrongNumberOfArgumentsException(name, params.size, args.size)
+      val m = params.zip(args).toMap
+      symTab.clear()
+      for (pair <- m) symTab += pair
+      extract()
+    }
   }
 
   class _cond(hdl: ScalaHDL) extends Dynamic {
@@ -363,7 +974,7 @@ package Core {
     def createModule(hdl: ScalaHDL, name: Symbol, params: Seq[Symbol],
       f: () => Unit) = {
       val m = new HDLModule(hdl, name, params, f)
-      hdl.modules += (name -> m)
+      hdl.blocks += (name -> m)
       m
     }
   }
@@ -373,6 +984,8 @@ package Core {
       extends HDLBlock(hdl, func) {
     def name = _name.name
 
+    private val symTab = new HashMap[Symbol, Any]
+
     override protected def preAction() {
       if (!hdl.currentBlock.isEmpty) {
         hdl.currentBlock.top.addStmt(this)
@@ -381,6 +994,20 @@ package Core {
           argsMap += (pair._1 -> ArgInfo(info.name, info.tpe, input, info.size))
         }
       }
+      val m = new HashMap[Symbol, Any]()
+      if (!hdl.currentFrame.isEmpty) {
+        for (pair <- hdl.currentFrame.top) {
+          m += pair
+        }
+      }
+      for (pair <- symTab) {
+        if (m.contains(pair._1)) {
+          m(pair._1) = pair._2
+        } else {
+          m += pair
+        }
+      }
+      hdl.currentFrame.push(m)
     }
 
     override protected def postAction() {
@@ -390,6 +1017,7 @@ package Core {
             hdl.currentBlock.top.argsMap(pair._1) = pair._2
         }
       }
+      hdl.currentFrame.pop()
     }
 
     private def mapArgs(args: Seq[Any]): Map[Symbol, Any] = {
@@ -485,26 +1113,23 @@ package Core {
 
     private val hdl: ScalaHDL = this
 
-    val modules = new HashMap[Symbol, HDLModule]
+    val blocks = new HashMap[Symbol, HDLBlock]
     val currentBlock: Stack[HDLBlock] = new Stack()
+    val currentFrame: Stack[HashMap[Symbol, Any]] = new Stack()
 
     var sigs: Set[Signal] = Set()
     var siglist: List[Signal] = List()
 
-    def sync(c: condition): _sync =
-      new _sync(this, c)
+    def sync(c: condition): _sync = new _sync(this, c)
 
-    def delay(time: Int): _delay =
-      new _delay(this, time)
+    def delay(time: Int): _delay = new _delay(this, time)
 
     def cycle(a: HDLIdent): HDLAssignment =
       HDLAssignment.createAssignment(hdl, a, HDLFunc1(hdl, sub, a))
 
-    def not(a: HDLObject): HDLFunc1 =
-      HDLFunc1(hdl, sub, a)
+    def not(a: HDLObject): HDLFunc1 = HDLFunc1(hdl, sub, a)
 
-    def module(name: Symbol, sigs: Signal*): module =
-      new module(name, sigs: _*)
+    def module(name: Symbol, sigs: Signal*): module = new module(name, sigs: _*)
 
     object defMod extends Dynamic {
       def applyDynamic(name: String)(params: Symbol*)(f: => Unit): HDLModule = {
@@ -513,8 +1138,8 @@ package Core {
     }
 
     object defFunc extends Dynamic {
-      def applyDynamic(name: String)(params: Any*)(f: => Unit): HDLFuncBlock = {
-        new HDLFuncBlock(hdl, name, () => f)
+      def applyDynamic(name: String)(params: Symbol*)(f: => Unit): HDLFuncBlock = {
+        HDLFuncBlock.createFuncBlock(hdl, name, params, () => f)
       }
     }
 
@@ -522,8 +1147,12 @@ package Core {
       new HDLIf(this, stmt, () => f)
 
     def convert(name: Symbol, args: Any*) = {
-      val m = modules(name)
-      m.convert(args)
+      val m = blocks(name)
+      m match {
+        case m: HDLModule => m.convert(args)
+        case _ => throw new IllegalArgumentException(
+          "%s must be name of a module!".format(name))
+      }
     }
 
     /*

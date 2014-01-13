@@ -62,17 +62,18 @@ object Main extends ScalaHDL {
         'bitonicMerge('t, 'z, 'dir)
       }
     }
+
     'bitonicSort('a, 'z, ASC)
   }
 
   def main(args: Array[String]) {
     val a0 = bool(0)
-    val a1 = bool(0)
+    val a1 = bool(1)
     val a2 = bool(0)
-    val a3 = bool(0)
-    val a4 = bool(0)
+    val a3 = bool(1)
+    val a4 = bool(1)
     val a5 = bool(0)
-    val a6 = bool(0)
+    val a6 = bool(1)
     val a7 = bool(0)
 
     val z0 = bool(0)
@@ -84,7 +85,7 @@ object Main extends ScalaHDL {
     val z6 = bool(0)
     val z7 = bool(0)
 
-    convert('sort8, a0, a1, a2, a3, a4, a5, a6, a7,
-      z0, z1, z2, z3, z4, z5, z6, z7)
+    println(convert('sort8, a0, a1, a2, a3, a4, a5, a6, a7,
+      z0, z1, z2, z3, z4, z5, z6, z7))
   }
 }
