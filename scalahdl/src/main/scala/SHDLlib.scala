@@ -2,6 +2,7 @@ package ScalaHDL
 
 import scala.language.dynamics
 
+import scala.collection.Set
 import scala.collection.mutable.Stack
 import scala.collection.mutable.HashMap
 
@@ -41,6 +42,12 @@ package Core {
   }
   import HDLOperation._
 
+  object HDLLogicOperator extends Enumeration {
+    type HDLLogicOperator = Value
+    val lt, let, eqt, get, gt = Value
+  }
+  import HDLLogicOperator._
+
   /*
    * HDL Objects.
    */
@@ -53,7 +60,7 @@ package Core {
   }
 
   abstract sealed class HDLObject(hdl: ScalaHDL) {
-    def convert(symTab: Map[Symbol, Any]): String
+    def convert(): String
     def exec(sigMap: Map[Symbol, Signal]): Signal = {
       new Bool("", 0)
     }
@@ -63,11 +70,11 @@ package Core {
 
   case class HDLFunc1 (hdl: ScalaHDL,
     op: HDLOperation, a: HDLObject) extends HDLFunc(hdl) {
-    override def convert(symTab: Map[Symbol, Any]): String = op match {
-      case `add` => " + " + a.convert(symTab)
-      case `sub` => " - " + a.convert(symTab)
-      case `mul` => " * " + a.convert(symTab)
-      case `div` => " / " + a.convert(symTab)
+    override def convert(): String = op match {
+      case `add` => " + " + a.convert()
+      case `sub` => " - " + a.convert()
+      case `mul` => " * " + a.convert()
+      case `div` => " / " + a.convert()
     }
     override def exec(sigMap: Map[Symbol, Signal]): Signal = op match {
       case `sub` => val b = a.exec(sigMap)
@@ -79,11 +86,11 @@ package Core {
 
   case class HDLFunc2 (hdl: ScalaHDL,
     op: HDLOperation, a: HDLObject, b: HDLObject) extends HDLFunc(hdl) {
-    override def convert(symTab: Map[Symbol, Any]): String = op match {
-      case `add` => a.convert(symTab) + " + " + b.convert(symTab)
-      case `sub` => a.convert(symTab) + " - " + b.convert(symTab)
-      case `mul` => a.convert(symTab) + " * " + b.convert(symTab)
-      case `div` => a.convert(symTab) + " / " + b.convert(symTab)
+    override def convert(): String = op match {
+      case `add` => a.convert() + " + " + b.convert()
+      case `sub` => a.convert() + " - " + b.convert()
+      case `mul` => a.convert() + " * " + b.convert()
+      case `div` => a.convert() + " / " + b.convert()
     }
     override def exec(sigMap: Map[Symbol, Signal]): Signal = {
       val sa = a.exec(sigMap)
@@ -101,8 +108,8 @@ package Core {
 
   case class HDLAssignment(hdl: ScalaHDL,
     left: HDLIdent, right: HDLObject) extends HDLObject(hdl) {
-    override def convert(symTab: Map[Symbol, Any]): String =
-      left.convert(symTab) + " <= " + right.convert(symTab) + ";\n"
+    override def convert(): String =
+      left.convert() + " <= " + right.convert() + ";\n"
     override def exec(sigMap: Map[Symbol, Signal]): Signal = {
       val sig = left.exec(sigMap)
       sig.next = right.exec(sigMap)
@@ -124,8 +131,45 @@ package Core {
     }
   }
 
+  class HDLType(val idt: HDLIdent, val info: ArgInfo) {
+    private val hdl: ScalaHDL = idt.hdl
+
+    def :=(sig: Signal): HDLAssignment =
+      HDLAssignment.createAssignment(hdl, idt, HDLSignal(hdl, () => sig))
+    def :=(other: HDLType): HDLAssignment =
+      HDLAssignment.createAssignment(hdl, idt, other.idt)
+
+    def <(sig: Signal): HDLJudgement =
+      HDLJudgement(hdl, lt, idt, HDLSignal(hdl, () => sig))
+    def <(other: HDLType): HDLJudgement =
+      HDLJudgement(hdl, lt, idt, other.idt)
+
+    def <=(sig: Signal): HDLJudgement =
+      HDLJudgement(hdl, let, idt, HDLSignal(hdl, () => sig))
+    def <=(other: HDLType): HDLJudgement =
+      HDLJudgement(hdl, let, idt, other.idt)
+
+    def >(sig: Signal): HDLJudgement =
+      HDLJudgement(hdl, gt, idt, HDLSignal(hdl, () => sig))
+    def >(other: HDLType): HDLJudgement =
+      HDLJudgement(hdl, gt, idt, other.idt)
+
+    def >=(sig: Signal): HDLJudgement =
+      HDLJudgement(hdl, get, idt, HDLSignal(hdl, () => sig))
+    def >=(other: HDLType): HDLJudgement =
+      HDLJudgement(hdl, get, idt, other.idt)
+
+    def ==(sig: Signal): HDLJudgement =
+      HDLJudgement(hdl, eqt, idt, HDLSignal(hdl, () => sig))
+    def ==(other: HDLType): HDLJudgement =
+      HDLJudgement(hdl, eqt, idt, other.idt)
+
+    override def toString =
+      "HDLType(" + idt.toString + "," + info.toString + ")"
+  }
+
   case class HDLIdent(hdl: ScalaHDL, name: Symbol)
-      extends HDLObject(hdl) with Dynamic {
+      extends HDLObject(hdl) {
     def +(other: HDLObject) = HDLFunc2(hdl, add, this, other)
     def -(other: HDLObject) = HDLFunc2(hdl, sub, this, other)
     def *(other: HDLObject) = HDLFunc2(hdl, mul, this, other)
@@ -135,49 +179,17 @@ package Core {
     def is(value: Int): condition =
       if (value == 0) condition(this, negedge)
       else condition(this, posedge)
-    override def convert(symTab: Map[Symbol, Any]): String = name.name
+    override def convert(): String = name.name
     override def exec(sigMap: Map[Symbol, Signal]) = sigMap(name)
 
     def apply(args: HDLObject*): HDLApply = {
       HDLApply.createApply(hdl, this, args)
     }
-
-    def selectDynamic(name: String): HDLMethodCall = {
-      new HDLMethodCall(hdl, this, name)
-    }
-
-    def applyDynamic(name: String)(args: Any*): HDLMethodCallWithArgs = {
-      new HDLMethodCallWithArgs(hdl, this, name, args)
-    }
-  }
-
-  class HDLMethodCall(hdl: ScalaHDL, ident: HDLIdent, methodName: String) {
-    def getInstanceAndMethod(symTab: Map[Symbol, Any]):
-        (ru.InstanceMirror, ru.Symbol) = {
-      val inst = symTab(ident.name)
-      val im = ru.runtimeMirror(getClass.getClassLoader).reflect(inst)
-      val m = im.symbol.typeSignature.member(ru.newTermName(methodName))
-      (im, m)
-    }
-
-    def convert(symTab: Map[Symbol, Any]) = {
-      val im = getInstanceAndMethod(symTab)
-      im._1.reflectMethod(im._2.asMethod)()
-    }
-  }
-
-  class HDLMethodCallWithArgs(hdl: ScalaHDL,
-    ident: HDLIdent, methodName: String, args: Seq[Any])
-      extends HDLMethodCall(hdl, ident, methodName) {
-    override def convert(symTab: Map[Symbol, Any]) = {
-      val im = getInstanceAndMethod(symTab)
-      im._1.reflectMethod(im._2.asMethod)(args)
-    }
   }
 
   case class HDLApply(hdl: ScalaHDL, modIdent: HDLIdent, args: Seq[HDLObject])
       extends HDLObject(hdl) {
-    override def convert(symTab: Map[Symbol, Any]): String = "" // Not supported yet!
+    override def convert(): String = "" // Not supported yet!
     override def exec(sigMap: Map[Symbol, Signal]) = null // TODO: write!
   }
 
@@ -189,11 +201,11 @@ package Core {
   }
 
   case class HDLSignal(hdl: ScalaHDL, sig: () => Signal) extends HDLObject(hdl) {
-    override def convert(symTab: Map[Symbol, Any]): String = sig().value.toString
+    override def convert(): String = sig().value.toString
     override def exec(sigMap: Map[Symbol, Signal]) = sig()
   }
 
-  abstract class HDLBlock(hdl: ScalaHDL, func: () => HDLObject)
+  abstract class HDLBlock(hdl: ScalaHDL, func: () => Unit)
       extends HDLObject(hdl) {
     protected var _content: List[HDLObject] = List()
 
@@ -227,19 +239,56 @@ package Core {
     }
   }
 
-  class HDLCondBlock(hdl: ScalaHDL, cond: _cond, name: String, func: () => HDLObject)
+  class HDLCondBlock(hdl: ScalaHDL, cond: _cond, name: String, func: () => Unit)
       extends HDLBlock(hdl, func) {
-    override def convert(symTab: Map[Symbol, Any]): String =
+    override def convert(): String =
       (cond match {
         case _sync(hdl, cond) =>
           "always @(" + cond.convert() + ") begin: _" + name + "\n"
-      }) + (for (stmt <- content) yield stmt.convert(symTab)).mkString("") + "end\n"
+      }) + (for (stmt <- content) yield stmt.convert()).mkString("") + "end\n"
     override def exec(sigMap: Map[Symbol, Signal]) = null
   }
 
   class _cond(hdl: ScalaHDL) extends Dynamic {
-    def applyDynamic(name: String)(f: => HDLObject): HDLCondBlock = {
+    def applyDynamic(name: String)(f: => Unit): HDLCondBlock = {
       val b = new HDLCondBlock(hdl, this, name, () => f)
+      b.extract()
+      b
+    }
+  }
+
+  case class HDLJudgement(hdl: ScalaHDL, op: HDLLogicOperator,
+    a: HDLObject, b: HDLObject) extends HDLObject(hdl) {
+    override def convert(): String = op match {
+      case `lt` => a.convert() + " < " + b.convert()
+      case `let` => a.convert() + " <= " + b.convert()
+      case `eqt` => a.convert() + " == " + b.convert()
+      case `gt` => a.convert() + " > " + b.convert()
+      case `get` => a.convert() + " >= " + b.convert()
+    }
+    // TODO: implement!
+    override def exec(sigMap: Map[Symbol, Signal]): Signal = null
+  }
+
+  class HDLIf(hdl: ScalaHDL, parent: HDLIf, judge: HDLJudgement, func: () => Unit)
+      extends HDLBlock(hdl, func) {
+    def this(hdl: ScalaHDL, judge: HDLJudgement, func: () => Unit) {
+      this(hdl, null, judge, func)
+    }
+    override def convert(): String =
+      (if (parent != null) "else " else "") +
+      (if (judge != null) "if (" + judge.convert() + ") " else "") +
+      "begin\n" +
+      content.map(_.convert()).mkString("") + "end\n"
+    // TODO: implement!
+    override def exec(sigMap: Map[Symbol, Signal]): Signal = null
+    def otherwise(f: => Unit): HDLIf = {
+      val b = new HDLIf(hdl, this, null, func)
+      b.extract()
+      b
+    }
+    def elsewhen(judge: HDLJudgement)(f: => Unit): HDLIf = {
+      val b = new HDLIf(hdl, this, judge, func)
       b.extract()
       b
     }
@@ -251,7 +300,7 @@ package Core {
 
   object HDLModule {
     def createModule(hdl: ScalaHDL, name: Symbol, params: Seq[Symbol],
-      f: () => HDLObject) = {
+      f: () => Unit) = {
       val m = new HDLModule(hdl, name, params, f)
       hdl.modules += (name -> m)
       m
@@ -259,7 +308,7 @@ package Core {
   }
 
   class HDLModule(hdl: ScalaHDL,
-    _name: Symbol, val params: Seq[Symbol], func: () => HDLObject)
+    _name: Symbol, val params: Seq[Symbol], func: () => Unit)
       extends HDLBlock(hdl, func) {
     def name = _name.name
 
@@ -278,14 +327,19 @@ package Core {
       m
     }
 
-    override def convert(symTab: Map[Symbol, Any]): String = {
+    override def convert(): String = {
       if (_content.isEmpty) extract()
       val s = "module %s (\n".format(name) + params.map(_.name).mkString("\n") +
         "\n);\n\n" +
-        (for (param <- params) yield argsMap(param).toHDL).mkString("") + "\n" +
-        (for (stmt <- content) yield stmt.convert(symTab)).mkString("") +
+        (for (param <- params) yield argsMap(param).declaration).mkString("") + "\n" +
+        (for (stmt <- content) yield stmt.convert()).mkString("") +
         "\nendmodule\n"
       s
+    }
+
+    def convert(args: Seq[Any]): String = {
+      mapArgs(args)
+      convert()
     }
 
     override def exec(sigMap: Map[Symbol, Signal]): Signal = {
@@ -303,8 +357,8 @@ package Core {
     implicit def signal2HDLSignal(s: Signal) = HDLSignal(this, () => s)
 
     private val hdl: ScalaHDL = this
+    private var tmpNum = 0;
 
-    // TODO: Scope?
     val modules = new HashMap[Symbol, HDLModule]
     val currentBlock: Stack[HDLBlock] = new Stack()
 
@@ -326,15 +380,42 @@ package Core {
     def module(name: Symbol, sigs: Signal*): module =
       new module(name, sigs: _*)
 
+    def when(stmt: HDLJudgement)(f: => Unit): HDLIf = {
+      val b = new HDLIf(this, stmt, () => f)
+      b.extract()
+      b
+    }
+
+    private def unusedName(set: Set[Symbol]): Symbol = {
+      var res = "tmp_" + tmpNum;
+      while (set.contains(res)) {
+        tmpNum += 1
+        res = "tmp_" + tmpNum
+      }
+      tmpNum += 1
+      res
+    }
+
+    import ScalaHDL.Core.DataType.ArgInfo
+
+    def toHDLType(name: Symbol): HDLType = new HDLType(
+      HDLIdent(this, name), currentBlock.top.argsMap(name))
+    def toHDLType(sig: Signal): HDLType = {
+      val name = unusedName(currentBlock.top.argsMap.keySet)
+      val info = ArgInfo(name.name, wire, middle, sig.size)
+      hdl.currentBlock.top.argsMap += (name -> info)
+      new HDLType(HDLIdent(this, name), info)
+    }
+
     object defMod extends Dynamic {
-      def applyDynamic(name: String)(params: Symbol*)(f: => HDLObject): HDLModule = {
+      def applyDynamic(name: String)(params: Symbol*)(f: => Unit): HDLModule = {
         HDLModule.createModule(hdl, name, params, () => f)
       }
     }
 
     def convert(name: Symbol, args: Any*) = {
       val m = modules(name)
-      m.convert(m.mapArgs(args))
+      m.convert(args)
     }
 
     /*
