@@ -160,6 +160,25 @@ package Core {
       }
     }
 
+    def /(other: Int) = {
+      getValue match {
+        case x: Int => x / other
+        case x: Long => x / other
+        case x: Short => x / other
+        case x: Float => x / other
+        case x: Double => x / other
+        case x: Char => x / other
+        case x: Byte => x / other
+        case _ =>
+          val res = invokeMethod("/", getTable, other)
+          res match {
+            case r: Boolean => r
+            case _ => throw new RuntimeException(
+              "the / method of %s should result in a Boolean!")
+          }
+      }
+    }
+
     def <(other: HDLObject) = HDLJudgement(hdl, lt, this, other)
     def <=(other: HDLObject) = HDLJudgement(hdl, let, this, other)
     def ==(other: HDLObject) = HDLJudgement(hdl, eqt, this, other)
@@ -764,6 +783,7 @@ package Core {
 
     private def argTranslate(arg: Any): Any = arg match {
       case x: HDLIdent => x.getValue
+      case x: Symbol => HDLIdent(hdl, x).getValue
       case _ => arg
     }
 
@@ -772,7 +792,10 @@ package Core {
     def apply(funcName: String)(args: Any*): Any = {
       val m = getTable
       val a: Seq[Any] = for (arg <- args) yield argTranslate(arg)
-      invokeMethod(funcName, m, a:_*)
+      println(a)
+      val r = invokeMethod(funcName, m, a:_*)
+      println(r)
+      r
     }
 
     def apply(args: Any*) = {
