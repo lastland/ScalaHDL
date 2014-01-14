@@ -19,7 +19,7 @@ import scala.collection.mutable.PriorityQueue
 
 
 class Simulator(hdl: ScalaHDL, mods: Seq[module]){
-
+/*
   object trace {
     var nameMap: Map[Signal, String] = Map[Signal, String]()
     var tracing: Boolean = false
@@ -48,7 +48,7 @@ class Simulator(hdl: ScalaHDL, mods: Seq[module]){
 
       log("\n$scope module main $end")
       for (kv <- nameMap)
-        log("$var reg %d %s %s $end".format(kv._1.bits, kv._2, kv._1.name))
+        log("$var reg %d %s %s $end".format(kv._1.size, kv._2, kv._1.name))
       for (mod <- mods)
       {
         log("$scope module %s $end".format(mod.name.name))
@@ -118,7 +118,8 @@ class Simulator(hdl: ScalaHDL, mods: Seq[module]){
         // TODO: the waiter wrap
         case x: _sync =>
           val w = new SyncWaiter(stmts, param_sig)
-          param_sig(x.symbol).addWaiter(w, x.cond)
+          // TODO: to be rewritten
+          param_sig(x.cond.ident.name).addWaiter(w, 0)
           lst = w :: lst
         case x: _delay =>
           val w = new DelayWaiter(stmts, param_sig, x.time)
@@ -196,4 +197,5 @@ class Simulator(hdl: ScalaHDL, mods: Seq[module]){
     waiters = List()
     trace.stop()
   }
+ */
 }
