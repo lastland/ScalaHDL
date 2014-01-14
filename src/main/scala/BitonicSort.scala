@@ -1,6 +1,7 @@
 package ScalaHDLExample.BitonicSort
 
 import ScalaHDL.Core.ScalaHDL
+import ScalaHDL.Core.HDLType
 import ScalaHDL.Core.DataType._
 import ScalaHDL.Core.DataType.Signals._
 import ScalaHDL.Simulation.Simulator
@@ -9,61 +10,60 @@ object Main extends ScalaHDL {
   val ASC = 0
   val DES = 1
 
-  defMod.compare('a, 'b, 'x, 'y, 'dir) {
-    if ('dir == ASC) {
-      if ('a > 'b) {
-        'x := 'b
-        'y := 'a
-      }
-      else {
-        'x := 'a
-        'y := 'b
-      }
-    } else {
-      if ('a > 'b) {
-        'x := 'a
-        'y := 'b
-      }
-      else {
-        'x := 'b
-        'y := 'a
-      }
-    }
-  }
-
   defMod.sort8('a0, 'a1, 'a2, 'a3, 'a4, 'a5, 'a6, 'a7,
     'z0, 'z1, 'z2, 'z3, 'z4, 'z5, 'z6, 'z7) {
-    val a = List('a0, 'a1, 'a2, 'a3, 'a4, 'a5, 'a6, 'a7)
-    val z = List('z0, 'z1, 'z2, 'z3, 'z4, 'z5, 'z6, 'z7)
+    val a = List('a0, 'a1, 'a2, 'a3, 'a4, 'a5, 'a6, 'a7).map(toHDLType)
+    val z = List('z0, 'z1, 'z2, 'z3, 'z4, 'z5, 'z6, 'z7).map(toHDLType)
 
-    defFunc.bitonicMerge(a, z, dir) {
-      val n = a.size
-      val k = n / 2
-      if (n > 1) {
-        val t = (for (i <- 0 to k) yield bool(0))
-        for (i <- 0 to k) {
-          'compare(a(i), a(i + k), t(i), t(i + k))
+    def compare(a: HDLType, b: HDLType, x: HDLType, y: HDLType, dir: Int) {
+      if (dir == ASC) {
+        when (a > b) {
+          x := b
+          y := a
+        } .otherwise {
+          x := a
+          y := b
         }
-        'bitonicMerge(t.take(k), z.take(k), dir)
-        'bitonicMerge(t.drop(k), z.drop(k), dir)
-      }
-      else {
-        'z := 'a
+      } else {
+        when (a > b) {
+          x := a
+          y := b
+        } .otherwise {
+          x := b
+          y := a
+        }
       }
     }
 
-    defFunc.bitonicSort(a, z, dir) {
+    def bitonicMerge(a: Seq[HDLType], z: Seq[HDLType], dir: Int) {
       val n = a.size
       val k = n / 2
       if (n > 1) {
-        val t = (for (i <- 0 to k) yield bool(0))
-        'bitonicSort(a.take(k), z.take(k), ASC)
-        'bitonicSort(a.drop(k), z.drop(k), DES)
-        'bitonicMerge(t, z, dir)
+        val t = (for (i <- 0 until n) yield bool(0)).map(toHDLType)
+        for (i <- 0 until k) {
+          compare(a(i), a(i + k), t(i), t(i + k), dir)
+        }
+        bitonicMerge(t.take(k), z.take(k), dir)
+        bitonicMerge(t.drop(k), z.drop(k), dir)
+      } else {
+        z.head := a.head
       }
     }
 
-    'bitonicSort(a, z, ASC)
+    def bitonicSort(a: Seq[HDLType], z: Seq[HDLType], dir: Int) {
+      val n = a.size
+      val k = n / 2
+      if (n > 1) {
+        val t = (for (i <- 0 until n) yield bool(0)).map(toHDLType)
+        bitonicSort(a.take(k), t.take(k), ASC)
+        bitonicSort(a.drop(k), t.drop(k), DES)
+        bitonicMerge(t, z, dir)
+      } else {
+        z.head := a.head
+      }
+    }
+
+    bitonicSort(a, z, ASC)
   }
 
   def main(args: Array[String]) {
@@ -85,7 +85,7 @@ object Main extends ScalaHDL {
     val z6 = bool(0)
     val z7 = bool(0)
 
-    convert('sort8, a0, a1, a2, a3, a4, a5, a6, a7,
-      z0, z1, z2, z3, z4, z5, z6, z7)
+    println(convert('sort8, a0, a1, a2, a3, a4, a5, a6, a7,
+      z0, z1, z2, z3, z4, z5, z6, z7))
   }
 }
