@@ -4,6 +4,7 @@ import scala.language.dynamics
 
 import scala.collection.Set
 import scala.collection.mutable.Stack
+import scala.collection.mutable.HashSet
 import scala.collection.mutable.HashMap
 
 import scala.reflect.runtime.{universe => ru}
@@ -30,7 +31,12 @@ package Core {
    * module class.
    */
 
-  class module(val name: Symbol, val sigs: Signal*)
+  class module(val name: Symbol, val sigs: Signal*) {
+    def extract(hdl: ScalaHDL) {
+      hdl.modules(name).mapArgs(sigs)
+      hdl.modules(name).extract()
+    }
+  }
 
   /*
    * HDL Operations.
@@ -61,7 +67,7 @@ package Core {
 
   abstract sealed class HDLObject(hdl: ScalaHDL) {
     def convert(): String
-    def exec(sigMap: Map[Symbol, Signal]): Signal = {
+    def exec(sigMap: HashMap[Symbol, Signal]): Signal = {
       new Bool("", 0)
     }
   }
@@ -76,9 +82,8 @@ package Core {
       case `mul` => " * " + a.convert()
       case `div` => " / " + a.convert()
     }
-    override def exec(sigMap: Map[Symbol, Signal]): Signal = op match {
+    override def exec(sigMap: HashMap[Symbol, Signal]): Signal = op match {
       case `sub` => val b = a.exec(sigMap)
-        // TODO: more bits
         b.opposite
       case _ => a.exec(sigMap)
     }
@@ -92,7 +97,7 @@ package Core {
       case `mul` => a.convert() + " * " + b.convert()
       case `div` => a.convert() + " / " + b.convert()
     }
-    override def exec(sigMap: Map[Symbol, Signal]): Signal = {
+    override def exec(sigMap: HashMap[Symbol, Signal]): Signal = {
       val sa = a.exec(sigMap)
       val sb = b.exec(sigMap)
       val va = sa.value
@@ -109,11 +114,14 @@ package Core {
   case class HDLAssignment(hdl: ScalaHDL,
     left: HDLIdent, right: HDLObject) extends HDLObject(hdl) {
     override def convert(): String =
-      left.convert() + " <= " + right.convert() + ";\n"
-    override def exec(sigMap: Map[Symbol, Signal]): Signal = {
+      if (hdl.currentBlock.top.argsMap(left.name).tpe == wire)
+        "assign " + left.convert() + " = " + right.convert() + ";\n"
+      else
+        left.convert() + " <= " + right.convert() + ";\n"
+    override def exec(sigMap: HashMap[Symbol, Signal]): Signal = {
       val sig = left.exec(sigMap)
       sig.next = right.exec(sigMap)
-      hdl.siglist = sig :: hdl.siglist
+      hdl.siglist.add(sig)
       sig.next
     }
   }
@@ -124,8 +132,26 @@ package Core {
       hdl.currentBlock.top.addStmt(a)
       if (hdl.currentBlock.top.argsMap.contains(id.name)) {
         val v = hdl.currentBlock.top.argsMap(id.name)
+        var dir = v.dir
+        var tpe = v.tpe
+        if (v.dir != middle) {
+          dir = output
+        }
+        hdl.currentBlock.top match {
+          case b: HDLCondBlock =>
+            if (!b.simpleComb) {
+              tpe = reg
+            }
+          case b =>
+            tpe = reg
+        }
         hdl.currentBlock.top.argsMap(id.name) =
-          ArgInfo(v.name, v.tpe, output, v.size)
+          ArgInfo(v.name, tpe, dir, v.size)
+      }
+      ob match {
+        case id: HDLIdent =>
+          hdl.currentBlock.top.senslist += id.name
+        case _ => null
       }
       a
     }
@@ -180,7 +206,7 @@ package Core {
       if (value == 0) condition(this, negedge)
       else condition(this, posedge)
     override def convert(): String = name.name
-    override def exec(sigMap: Map[Symbol, Signal]) = sigMap(name)
+    override def exec(sigMap: HashMap[Symbol, Signal]) = sigMap(name)
 
     def apply(args: HDLObject*): HDLApply = {
       HDLApply.createApply(hdl, this, args)
@@ -190,7 +216,7 @@ package Core {
   case class HDLApply(hdl: ScalaHDL, modIdent: HDLIdent, args: Seq[HDLObject])
       extends HDLObject(hdl) {
     override def convert(): String = "" // Not supported yet!
-    override def exec(sigMap: Map[Symbol, Signal]) = null // TODO: write!
+    override def exec(sigMap: HashMap[Symbol, Signal]) = null // TODO: write!
   }
 
   object HDLApply {
@@ -202,16 +228,21 @@ package Core {
 
   case class HDLSignal(hdl: ScalaHDL, sig: () => Signal) extends HDLObject(hdl) {
     override def convert(): String = sig().value.toString
-    override def exec(sigMap: Map[Symbol, Signal]) = sig()
+    override def exec(sigMap: HashMap[Symbol, Signal]) = sig()
   }
 
   abstract class HDLBlock(hdl: ScalaHDL, func: () => Unit)
       extends HDLObject(hdl) {
     protected var _content: List[HDLObject] = List()
 
+    val sigMap = new HashMap[Symbol, Signal]
     val argsMap = new HashMap[Symbol, ArgInfo]
+    val senslist = new HashSet[Symbol]
 
-    def content = _content.reverse
+    def content = {
+      if (_content.isEmpty) extract()
+      _content.reverse
+    }
 
     def addStmt(stmt: HDLObject) {
       _content = stmt :: _content
@@ -221,35 +252,82 @@ package Core {
       if (_content.isEmpty) {
         if (!hdl.currentBlock.isEmpty) {
           hdl.currentBlock.top.addStmt(this)
-          for (pair <- hdl.currentBlock.top.argsMap) {
-            val info = pair._2
-            argsMap += (pair._1 -> ArgInfo(info.name, info.tpe, input, info.size))
-          }
+          argsMap ++= hdl.currentBlock.top.argsMap
+          sigMap ++= hdl.currentBlock.top.sigMap
         }
         hdl.currentBlock.push(this)
         func()
         hdl.currentBlock.pop()
         if (!hdl.currentBlock.isEmpty) {
           for (pair <- argsMap) {
-            if (pair._2.dir == output)
-              hdl.currentBlock.top.argsMap(pair._1) = pair._2
+            hdl.currentBlock.top.argsMap(pair._1) = pair._2
           }
+          for (pair <- sigMap) {
+            hdl.currentBlock.top.sigMap(pair._1) = pair._2
+          }
+          hdl.currentBlock.top.senslist ++= senslist
         }
       }
     }
   }
 
-  class HDLCondBlock(hdl: ScalaHDL, cond: _cond, name: String, func: () => Unit)
+  class HDLCondBlock(hdl: ScalaHDL, val cond: _cond, name: String,
+    func: () => Unit)
       extends HDLBlock(hdl, func) {
+
+    private var _simpleComb: Boolean = true
+    private var _simpleCombCalc: Boolean = false
+
+    cond match {
+      case s: _sync =>
+        senslist += s.cond.ident.name
+      case _ => null
+    }
+
+    def simpleComb: Boolean = {
+      cond match {
+        case a: _async =>
+          if (_simpleCombCalc) _simpleComb
+          else {
+            _simpleComb = !content.exists(stmt =>
+              stmt match {
+                case a: HDLAssignment => false
+                case _ => true
+              })
+            _simpleCombCalc = true
+            _simpleComb
+          }
+        case _ => false
+      }
+    }
+
     override def convert(): String =
       (cond match {
         case _sync(hdl, cond) =>
-          "always @(" + cond.convert() + ") begin: _" + name + "\n"
-      }) + (for (stmt <- content) yield stmt.convert()).mkString("") + "end\n"
-    override def exec(sigMap: Map[Symbol, Signal]) = null
+          "always @(" + cond.convert() + ") begin: _" +
+            name + "\n" +
+            (for (stmt <- content) yield stmt.convert()).mkString("") + "end\n"
+        case _async(hdl) =>
+          if (simpleComb) {
+            (for (stmt <- content) yield stmt.convert()).mkString("")
+          }
+          else {
+            "always @(" + senslist.map(_.name).mkString(", ") + ") begin\n" +
+              (for (stmt <- content) yield stmt.convert()).mkString("") + "end\n"
+          }
+      }) + "\n"
+
+    override def exec(sigMap: HashMap[Symbol, Signal]) = null
   }
 
   class _cond(hdl: ScalaHDL) extends Dynamic {
+
+    def apply(f: => Unit): HDLCondBlock = {
+      val b = new HDLCondBlock(hdl, this, "", () => f)
+      b.extract()
+      b
+    }
+
     def applyDynamic(name: String)(f: => Unit): HDLCondBlock = {
       val b = new HDLCondBlock(hdl, this, name, () => f)
       b.extract()
@@ -266,35 +344,64 @@ package Core {
       case `gt` => a.convert() + " > " + b.convert()
       case `get` => a.convert() + " >= " + b.convert()
     }
-    // TODO: implement!
-    override def exec(sigMap: Map[Symbol, Signal]): Signal = null
+
+    override def exec(sigMap: HashMap[Symbol, Signal]): Signal = {
+      val bool = op match {
+        case `lt` => a.exec(sigMap) < b.exec(sigMap)
+        case `let` => a.exec(sigMap) <= b.exec(sigMap)
+        case `eqt` => a.exec(sigMap) == b.exec(sigMap)
+        case `gt` => a.exec(sigMap) > b.exec(sigMap)
+        case `get` => a.exec(sigMap) >= b.exec(sigMap)
+      }
+      if (bool) new Bool("", 1)
+      else new Bool("", 0)
+    }
   }
 
   class HDLIf(hdl: ScalaHDL, parent: HDLIf, judge: HDLJudgement, func: () => Unit)
       extends HDLBlock(hdl, func) {
+    var child: HDLIf = null
+
     def this(hdl: ScalaHDL, judge: HDLJudgement, func: () => Unit) {
       this(hdl, null, judge, func)
     }
+
     override def convert(): String =
       (if (parent != null) "else " else "") +
       (if (judge != null) "if (" + judge.convert() + ") " else "") +
       "begin\n" +
       content.map(_.convert()).mkString("") + "end\n"
-    // TODO: implement!
-    override def exec(sigMap: Map[Symbol, Signal]): Signal = null
+
+    override def exec(sigMap: HashMap[Symbol, Signal]): Signal = {
+      if (judge == null || judge.exec(sigMap).value > 0) {
+        for (stmt <- content) {
+          stmt.exec(sigMap)
+        }
+      }
+      else if (child != null) {
+        child.exec(sigMap)
+      }
+      null
+    }
+
     def otherwise(f: => Unit): HDLIf = {
       val b = new HDLIf(hdl, this, null, func)
+      child = b
       b.extract()
       b
     }
+
     def elsewhen(judge: HDLJudgement)(f: => Unit): HDLIf = {
       val b = new HDLIf(hdl, this, judge, func)
+      child = b
       b.extract()
       b
     }
   }
 
   case class _sync(hdl: ScalaHDL, val cond: condition) extends _cond(hdl)
+
+  case class _async(hdl: ScalaHDL) extends _cond(hdl)
 
   case class _delay(hdl: ScalaHDL, val time: Int) extends _cond(hdl)
 
@@ -329,11 +436,13 @@ package Core {
 
     override def convert(): String = {
       if (_content.isEmpty) extract()
-      val s = "module %s (\n".format(name) + params.map(_.name).mkString("\n") +
-        "\n);\n\n" +
-        (for (param <- params) yield argsMap(param).declaration).mkString("") + "\n" +
+      hdl.currentBlock.push(this)
+      val s = "module %s (\n".format(name) + params.map(_.name).mkString(",\n") +
+      "\n);\n\n" +
+        (for (arg <- argsMap) yield arg._2.declaration).toList.sorted.mkString("") + "\n" +
         (for (stmt <- content) yield stmt.convert()).mkString("") +
-        "\nendmodule\n"
+      "\nendmodule\n"
+      hdl.currentBlock.pop()
       s
     }
 
@@ -342,9 +451,8 @@ package Core {
       convert()
     }
 
-    override def exec(sigMap: Map[Symbol, Signal]): Signal = {
-      null // TODO: write it!
-    }
+    // TODO: implement
+    override def exec(sigMap: HashMap[Symbol, Signal]): Signal = null
   }
 
   class ScalaHDL {
@@ -363,10 +471,13 @@ package Core {
     val currentBlock: Stack[HDLBlock] = new Stack()
 
     var sigs: Set[Signal] = Set()
-    var siglist: List[Signal] = List()
+    var siglist: HashSet[Signal] = HashSet()
 
     def sync(c: condition): _sync =
       new _sync(this, c)
+
+    def async: _async =
+      new _async(this)
 
     def delay(time: Int): _delay =
       new _delay(this, time)
@@ -404,6 +515,7 @@ package Core {
       val name = unusedName(currentBlock.top.argsMap.keySet)
       val info = ArgInfo(name.name, wire, middle, sig.size)
       hdl.currentBlock.top.argsMap += (name -> info)
+      hdl.currentBlock.top.sigMap += (name -> sig)
       new HDLType(HDLIdent(this, name), info)
     }
 

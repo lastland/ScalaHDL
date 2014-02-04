@@ -3,8 +3,10 @@ package ScalaHDL.Simulation
 import ScalaHDL.Core.ScalaHDL
 import ScalaHDL.Core.module
 import ScalaHDL.Core._sync
+import ScalaHDL.Core._async
 import ScalaHDL.Core._delay
 import ScalaHDL.Core.DataType._
+import ScalaHDL.Core.HDLCondBlock
 import ScalaHDL.Helpers.CoroutineHelper._
 
 import java.io.File
@@ -19,7 +21,6 @@ import scala.collection.mutable.PriorityQueue
 
 
 class Simulator(hdl: ScalaHDL, mods: Seq[module]){
-/*
   object trace {
     var nameMap: Map[Signal, String] = Map[Signal, String]()
     var tracing: Boolean = false
@@ -54,8 +55,8 @@ class Simulator(hdl: ScalaHDL, mods: Seq[module]){
         log("$scope module %s $end".format(mod.name.name))
         val params = hdl.modules(mod.name).params
         for (param <- params) {
-          val sig = hdl.moduleSigMap(mod.name)(param)
-          log("$var reg %d %s %s $end".format(sig.bits, nameMap(sig), param.name))
+          val sig = hdl.modules(mod.name).sigMap(param)
+          log("$var reg %d %s %s $end".format(sig.size, nameMap(sig), param.name))
         }
         log("$upscope $end")
       }
@@ -67,7 +68,7 @@ class Simulator(hdl: ScalaHDL, mods: Seq[module]){
     }
 
     def logNew(sig: Signal) {
-      if (file != null && writer != null)
+      if (file != null && writer != null && nameMap.contains(sig))
         log("b%s %s".format(sig.value.toBinaryString, nameMap(sig)))
     }
 
@@ -100,33 +101,46 @@ class Simulator(hdl: ScalaHDL, mods: Seq[module]){
   def getRunningState = startRunning
 
   private def wire(mods: Seq[module]): List[Waiter] = {
-    hdl.moduleSigMap.clear()
     hdl.sigs = Set()
     var lst: List[Waiter] = List()
     for (mod <- mods) {
+      mod.extract(hdl)
       val name = mod.name
       val sigs = mod.sigs
       val hdlmod = hdl.modules(name)
       val params = hdlmod.params
-      val cond = hdl.moduleConds(name)
-      val stmts = hdl.moduleStmts(name).reverse
+      val stmts = hdlmod.content
 
       for (sig <- sigs) hdl.sigs = hdl.sigs + sig
 
       val param_sig = params.zip(sigs).toMap
-      cond match {
-        // TODO: the waiter wrap
-        case x: _sync =>
-          val w = new SyncWaiter(stmts, param_sig)
-          // TODO: to be rewritten
-          param_sig(x.cond.ident.name).addWaiter(w, 0)
-          lst = w :: lst
-        case x: _delay =>
-          val w = new DelayWaiter(stmts, param_sig, x.time)
-          lst = w :: lst
-        case _ => ()
+      for (e <- param_sig) hdlmod.sigMap += e
+
+      for (stmt <- hdlmod.content) {
+        stmt match {
+          case b: HDLCondBlock =>
+            b.cond match {
+              case c: _sync =>
+                val w = new SyncWaiter(b.content, hdlmod.sigMap)
+                param_sig(c.cond.ident.name).addWaiter(w, c.cond.edge)
+                lst = w :: lst
+              case c: _delay =>
+                val w = new DelayWaiter(b.content, hdlmod.sigMap, c.time)
+                lst = w :: lst
+              // TODO: others
+              case c: _async =>
+                val w = new AsyncWaiter(b.content, hdlmod.sigMap)
+                for (sig <- b.senslist) {
+                  hdlmod.sigMap(sig).addWaiter(w)
+                }
+                schedule(0, w)
+                lst = w :: lst
+              case _ => throw new RuntimeException("Not supported")
+            }
+          //TODO: others
+          case _ => throw new RuntimeException("Not supported")
+        }
       }
-      hdl.moduleSigMap += (name -> param_sig)
     }
     lst
   }
@@ -143,7 +157,7 @@ class Simulator(hdl: ScalaHDL, mods: Seq[module]){
         waiters = sig.update() ::: waiters
         trace.logNew(sig)
       }
-      hdl.siglist = List()
+      hdl.siglist.clear()
       for (waiter <- waiters) {
         val wl = waiter.next()
         wl.foreach(w => w match {
@@ -156,6 +170,7 @@ class Simulator(hdl: ScalaHDL, mods: Seq[module]){
       waiters = List()
 
       if (hdl.siglist.isEmpty) {
+        if (futureEvents.isEmpty) return waiters
         val spans = futureEvents.span(_._1 == futureEvents.head._1)
         val events = spans._1
         futureEvents = spans._2
@@ -178,7 +193,7 @@ class Simulator(hdl: ScalaHDL, mods: Seq[module]){
     if (fileName != "")
       trace.start(fileName)
 
-    hdl.siglist = List()
+    hdl.siglist.clear()
     waiters = exec(maxTime, waiters)
   }
 
@@ -197,5 +212,4 @@ class Simulator(hdl: ScalaHDL, mods: Seq[module]){
     waiters = List()
     trace.stop()
   }
- */
 }

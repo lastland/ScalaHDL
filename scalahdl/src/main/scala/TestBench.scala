@@ -7,7 +7,6 @@ import ScalaHDL.Core.DataType.Signal
 import ScalaHDL.Core.module
 
 trait TestHelper {
-/*
   def Simulator(hdl: ScalaHDL, mods: module*) =
     new SimulatorForTest(hdl, mods)
 
@@ -53,5 +52,4 @@ class SimulatorForTest(hdl: ScalaHDL, mods: Seq[module])
     }
     stop()
   }
- */
 }

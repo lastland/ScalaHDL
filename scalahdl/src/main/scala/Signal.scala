@@ -40,6 +40,10 @@ package ScalaHDL.Core.DataType {
 
     checkValid()
 
+    def addWaiter(w: Waiter) {
+      eventWaiters = w :: eventWaiters
+    }
+
     def addWaiter(w: Waiter, v: Edge) {
       import Edge._
       if (v == posedge) posedgeWaiters = w :: posedgeWaiters
@@ -65,6 +69,17 @@ package ScalaHDL.Core.DataType {
     def -(other: Signal): Signal
     def *(other: Signal): Signal
     def /(other: Signal): Signal
+
+    def <(other: Signal): Boolean =
+      value < other.value
+    def <=(other: Signal): Boolean =
+      value <= other.value
+    def equals(other: Signal): Boolean =
+      value == other.value
+    def >(other: Signal): Boolean =
+      value > other.value
+    def >=(other: Signal): Boolean =
+      value >= other.value
   }
 
   class Unsigned(override val name: String, override var _value: Int, _bits: Int)

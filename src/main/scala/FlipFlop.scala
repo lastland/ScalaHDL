@@ -29,5 +29,10 @@ object Main extends ScalaHDL {
     val d = bool(1)
     val clk = bool(0)
     println(convert('FlipFlop, d, q, clk))
+    val sim = Simulator(this,
+      module('FlipFlop, d, q, clk),
+      module('Bench, d, q, clk))
+    sim.simulate(1000, "dff.vcd")
+    sim.stop()
   }
 }

@@ -3,7 +3,9 @@ import ScalaHDL.Core._
 import ScalaHDL.Core.DataType._
 import ScalaHDL.Helpers.CoroutineHelper._
 
-class Waiter(stmts: Seq[HDLObject], val sigMap: Map[Symbol, Signal]) {
+import scala.collection.mutable.HashMap
+
+class Waiter(stmts: Seq[HDLObject], val sigMap: HashMap[Symbol, Signal]) {
   val iter =
     iterator[List[Waiter]] {
       var senslist: List[Waiter] = List()
@@ -16,10 +18,13 @@ class Waiter(stmts: Seq[HDLObject], val sigMap: Map[Symbol, Signal]) {
   def next() = iter.next
 }
 
-class SyncWaiter(stmts: Seq[HDLObject], override val sigMap: Map[Symbol, Signal])
+class SyncWaiter(stmts: Seq[HDLObject], override val sigMap: HashMap[Symbol, Signal])
     extends Waiter(stmts, sigMap)
 
-class DelayWaiter(stmts: Seq[HDLObject], override val sigMap: Map[Symbol, Signal], t: Int)
+class AsyncWaiter(stmts: Seq[HDLObject], override val sigMap: HashMap[Symbol, Signal])
+    extends Waiter(stmts, sigMap)
+
+class DelayWaiter(stmts: Seq[HDLObject], override val sigMap: HashMap[Symbol, Signal], t: Int)
     extends Waiter(stmts, sigMap) {
   override val iter =
     iterator[List[Waiter]] {

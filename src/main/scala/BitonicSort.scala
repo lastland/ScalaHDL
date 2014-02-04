@@ -16,21 +16,23 @@ object Main extends ScalaHDL {
     val z = List('z0, 'z1, 'z2, 'z3, 'z4, 'z5, 'z6, 'z7).map(toHDLType)
 
     def compare(a: HDLType, b: HDLType, x: HDLType, y: HDLType, dir: Int) {
-      if (dir == ASC) {
-        when (a > b) {
-          x := b
-          y := a
-        } .otherwise {
-          x := a
-          y := b
-        }
-      } else {
-        when (a > b) {
-          x := a
-          y := b
-        } .otherwise {
-          x := b
-          y := a
+      async {
+        if (dir == ASC) {
+          when (a > b) {
+            x := b
+            y := a
+          } .otherwise {
+            x := a
+            y := b
+          }
+        } else {
+          when (a > b) {
+            x := a
+            y := b
+          } .otherwise {
+            x := b
+            y := a
+          }
         }
       }
     }
@@ -46,7 +48,9 @@ object Main extends ScalaHDL {
         bitonicMerge(t.take(k), z.take(k), dir)
         bitonicMerge(t.drop(k), z.drop(k), dir)
       } else {
-        z.head := a.head
+        async {
+          z.head := a.head
+        }
       }
     }
 
@@ -59,7 +63,9 @@ object Main extends ScalaHDL {
         bitonicSort(a.drop(k), t.drop(k), DES)
         bitonicMerge(t, z, dir)
       } else {
-        z.head := a.head
+        async {
+          z.head := a.head
+        }
       }
     }
 
@@ -68,12 +74,12 @@ object Main extends ScalaHDL {
 
   def main(args: Array[String]) {
     val a0 = bool(0)
-    val a1 = bool(0)
+    val a1 = bool(1)
     val a2 = bool(0)
     val a3 = bool(0)
-    val a4 = bool(0)
-    val a5 = bool(0)
-    val a6 = bool(0)
+    val a4 = bool(1)
+    val a5 = bool(1)
+    val a6 = bool(1)
     val a7 = bool(0)
 
     val z0 = bool(0)
@@ -87,5 +93,10 @@ object Main extends ScalaHDL {
 
     println(convert('sort8, a0, a1, a2, a3, a4, a5, a6, a7,
       z0, z1, z2, z3, z4, z5, z6, z7))
+    val sim = Simulator(this,
+      module('sort8, a0, a1, a2, a3, a4, a5, a6, a7,
+        z0, z1, z2, z3, z4, z5, z6, z7))
+    sim.simulate(100, "bs.vcd")
+    sim.stop()
   }
 }
