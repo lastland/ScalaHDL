@@ -31,6 +31,7 @@ class Simulator(hdl: ScalaHDL, mods: Seq[module]){
       nameMap = hdl.sigs.zip((0 until hdl.sigs.size).map("N" + _.toString)).toMap
 
       file = new File(fileName)
+
       writer = new BufferedWriter(new FileWriter(file))
 
       log(List(
@@ -103,7 +104,7 @@ class Simulator(hdl: ScalaHDL, mods: Seq[module]){
   def getRunningState = startRunning
 
   private def wire(mods: Seq[module]): List[Waiter] = {
-    hdl.sigs = Set()
+    hdl.sigs.clear()
     var lst: List[Waiter] = List()
     for (mod <- mods) {
       mod.extract(hdl)
@@ -113,7 +114,7 @@ class Simulator(hdl: ScalaHDL, mods: Seq[module]){
       val params = hdlmod.params
       val stmts = hdlmod.content
 
-      for (sig <- sigs) hdl.sigs = hdl.sigs + sig
+      hdl.sigs ++= sigs
 
       val param_sig = params.zip(sigs).toMap
       for (e <- param_sig) hdlmod.sigMap += e

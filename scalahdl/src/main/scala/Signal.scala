@@ -74,8 +74,15 @@ package ScalaHDL.Core.DataType {
       value < other.value
     def <=(other: Signal): Boolean =
       value <= other.value
-    def equals(other: Signal): Boolean =
-      value == other.value
+    override def equals(other: Any): Boolean = other match {
+      case other: Signal =>
+        (value == other.value && name == other.name && size == other.size) ||
+        ((name == " " || other.name == " ") && value == other.value)
+      case other: Int =>
+        value == other
+      case _ =>
+        throw new RuntimeException("Camparing signal with unsupported data type!")
+    }
     def >(other: Signal): Boolean =
       value > other.value
     def >=(other: Signal): Boolean =
@@ -133,16 +140,6 @@ package ScalaHDL.Core.DataType {
         case x: Unsigned => new Unsigned("", _value / other.value, s)
         case _ => throw new RuntimeException("Not supported yet!") // TODO: support signed
       }
-    }
-
-    override def equals(another: Any): Boolean = another match {
-      case x: Unsigned =>
-        // only value, every field, or hashcode?
-        _value == x.value && _bits == x.size && name == x.name
-      case x: Int =>
-        _value == x
-      case _ => throw new RuntimeException(
-        "comparing Unsigned with unsupported data type")
     }
 
     override def toString(): String =

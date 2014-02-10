@@ -1,4 +1,4 @@
-package ScalaHDLExample.Adder
+package ScalaHDLExample.Arithmetic.Add
 
 import ScalaHDL.Core.ScalaHDL
 import ScalaHDL.Core.HDLType

@@ -1,6 +1,6 @@
 import org.scalatest.FunSuite
 
-import ScalaHDLExample.Adder.Adder
+import ScalaHDLExample.Arithmetic.Add.Adder
 import ScalaHDL.Core.DataType._
 import ScalaHDL.Core.DataType.Signals._
 import ScalaHDL.Test.TestHelper
@@ -14,6 +14,7 @@ object AdderTestBench extends Adder {
     }
 
     sync(0) {
+      'rst := 0
       'a := A.next()
       'b := B.next()
     }
@@ -33,7 +34,7 @@ class AdderTest extends FunSuite with TestHelper {
     val sim = Simulator(AdderTestBench,
       module('adder, clk, rst, a, b, z),
       module('Bench, clk, rst, a, b, z))
-    sim.setTrace("adder.vcd")
+    sim.setTrace("add.vcd")
     sim since 0 until 14 every 2 run {
       assert(clk === 0)
     }

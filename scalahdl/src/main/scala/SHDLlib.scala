@@ -15,17 +15,7 @@ import ScalaHDL.Core.DataType.SignalDirection._
 
 package Core {
 
-  /*
-   * conditions.
-   */
-
   import ScalaHDL.Core.DataType.Edge._
-  case class condition(ident: HDLIdent, edge: Edge) {
-    def convert(): String = edge match {
-      case `posedge` => "posedge " + ident.name.name
-      case `negedge` => "negedge " + ident.name.name
-    }
-  }
 
   /*
    * module class.
@@ -216,9 +206,6 @@ package Core {
     def /(other: HDLObject) = HDLFunc2(hdl, div, this, other)
     def :=(other: HDLObject) = HDLAssignment.createAssignment(
       hdl, this, other)
-    def is(value: Int): condition =
-      if (value == 0) condition(this, negedge)
-      else condition(this, posedge)
     override def convert(): String = name.name
     override def exec(sigMap: HashMap[Symbol, Signal]) = sigMap(name)
 
@@ -477,7 +464,7 @@ package Core {
     import ScalaHDL.Core.DataType.Signals._
 
     implicit def string2Symbol(s: String) = Symbol(s)
-    implicit def int2Signal(value: => Int) = new Signed("", value)
+    implicit def int2Signal(value: => Int) = new Signed(" ", value)
     implicit def int2HDLSignal(value: => Int) = HDLSignal(this, () => int2Signal(value))
     implicit def signal2HDLSignal(s: Signal) = HDLSignal(this, () => s)
     implicit def sym2HDLObj(s: Symbol): HDLObject = HDLIdent(this, s)
@@ -491,8 +478,8 @@ package Core {
     val modules = new HashMap[Symbol, HDLModule]
     val currentBlock: Stack[HDLBlock] = new Stack()
 
-    var sigs: Set[Signal] = Set()
-    var siglist: HashSet[Signal] = HashSet()
+    val sigs: HashSet[Signal] = new HashSet()
+    val siglist: HashSet[Signal] = new HashSet()
 
     def sync(e: Int): _sync =
       if (e == 1)
