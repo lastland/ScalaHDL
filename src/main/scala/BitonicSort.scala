@@ -6,7 +6,7 @@ import ScalaHDL.Core.DataType._
 import ScalaHDL.Core.DataType.Signals._
 import ScalaHDL.Simulation.Simulator
 
-object Main extends ScalaHDL {
+trait BitonicSort extends ScalaHDL {
   val ASC = 0
   val DES = 1
 
@@ -41,7 +41,7 @@ object Main extends ScalaHDL {
       val n = a.size
       val k = n / 2
       if (n > 1) {
-        val t = (for (i <- 0 until n) yield bool(0)).map(toHDLType)
+        val t = (for (i <- 0 until n) yield unsigned(0, 4)).map(toHDLType)
         for (i <- 0 until k) {
           compare(a(i), a(i + k), t(i), t(i + k), dir)
         }
@@ -58,7 +58,7 @@ object Main extends ScalaHDL {
       val n = a.size
       val k = n / 2
       if (n > 1) {
-        val t = (for (i <- 0 until n) yield bool(0)).map(toHDLType)
+        val t = (for (i <- 0 until n) yield unsigned(0, 4)).map(toHDLType)
         bitonicSort(a.take(k), t.take(k), ASC)
         bitonicSort(a.drop(k), t.drop(k), DES)
         bitonicMerge(t, z, dir)
@@ -71,32 +71,29 @@ object Main extends ScalaHDL {
 
     bitonicSort(a, z, ASC)
   }
+}
 
+object Main extends BitonicSort {
   def main(args: Array[String]) {
-    val a0 = bool(0)
-    val a1 = bool(1)
-    val a2 = bool(0)
-    val a3 = bool(0)
-    val a4 = bool(1)
-    val a5 = bool(1)
-    val a6 = bool(1)
-    val a7 = bool(0)
+    val a0 = unsigned(0, 4)
+    val a1 = unsigned(0, 4)
+    val a2 = unsigned(0, 4)
+    val a3 = unsigned(0, 4)
+    val a4 = unsigned(0, 4)
+    val a5 = unsigned(0, 4)
+    val a6 = unsigned(0, 4)
+    val a7 = unsigned(0, 4)
 
-    val z0 = bool(0)
-    val z1 = bool(0)
-    val z2 = bool(0)
-    val z3 = bool(0)
-    val z4 = bool(0)
-    val z5 = bool(0)
-    val z6 = bool(0)
-    val z7 = bool(0)
+    val z0 = unsigned(0, 4)
+    val z1 = unsigned(0, 4)
+    val z2 = unsigned(0, 4)
+    val z3 = unsigned(0, 4)
+    val z4 = unsigned(0, 4)
+    val z5 = unsigned(0, 4)
+    val z6 = unsigned(0, 4)
+    val z7 = unsigned(0, 4)
 
     println(convert('sort8, a0, a1, a2, a3, a4, a5, a6, a7,
       z0, z1, z2, z3, z4, z5, z6, z7))
-    val sim = Simulator(this,
-      module('sort8, a0, a1, a2, a3, a4, a5, a6, a7,
-        z0, z1, z2, z3, z4, z5, z6, z7))
-    sim.simulate(100, "bs.vcd")
-    sim.stop()
   }
 }

@@ -5,7 +5,7 @@ import ScalaHDL.Core.DataType._
 import ScalaHDL.Core.DataType.Signals._
 import ScalaHDL.Test.TestHelper
 
-object TestBench extends ScalaHDLExample.FlipFlop.FlipFlop {
+object FlipFlopTestBench extends ScalaHDLExample.FlipFlop.FlipFlop {
   defMod.Bench('d, 'q, 'clk) {
     delay(10).clkGen {
       cycle('clk)
@@ -17,12 +17,12 @@ object TestBench extends ScalaHDLExample.FlipFlop.FlipFlop {
   }
 }
 
-class MainTest extends FunSuite with TestHelper {
+class FlipFlopTest extends FunSuite with TestHelper {
   test("test dff 1") {
     val q = bool(0)
     val d = bool(1)
     val clk = bool(0)
-    val sim = Simulator(TestBench,
+    val sim = Simulator(FlipFlopTestBench,
       module('FlipFlop, d, q, clk),
       module('Bench, d, q, clk))
 
@@ -42,11 +42,10 @@ class MainTest extends FunSuite with TestHelper {
     val q = bool(0)
     val d = bool(1)
     val clk = bool(0)
-    val sim = Simulator(TestBench,
+    val sim = Simulator(FlipFlopTestBench,
       module('FlipFlop, d, q, clk),
       module('Bench, d, q, clk))
     sim.setTrace("dff.vcd")
-
     sim since 0 to 1000 every 20 run {
       assert(clk === 0)
     }

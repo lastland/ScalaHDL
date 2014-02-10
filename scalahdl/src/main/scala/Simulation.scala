@@ -89,6 +89,8 @@ class Simulator(hdl: ScalaHDL, mods: Seq[module]){
     }
   }
 
+  var fileName: String = null
+
   private var futureEvents: PriorityQueue[(Int, Waiter)] =
     new PriorityQueue[(Int, Waiter)]()(Ordering[(Int)].on(x => -x._1))
   private var startRunning: Boolean = false
@@ -190,21 +192,21 @@ class Simulator(hdl: ScalaHDL, mods: Seq[module]){
     waiters
   }
 
-  def simulate(maxTime: Int, fileName: String = "") {
+  def simulate(maxTime: Int) {
     if (startRunning)
       throw SimulatorException("Simulator is already running!")
     waiters = wire(mods)
     nexttime = 0
     startRunning = true
-    if (fileName != "")
+    if (fileName != null)
       trace.start(fileName)
 
     hdl.siglist.clear()
     waiters = exec(maxTime, waiters)
   }
 
-  def setTrace(fileName: String) {
-    trace.start(fileName)
+  def setTrace(fName: String) {
+    fileName = fName
   }
 
   def continue(maxTime: Int) {
