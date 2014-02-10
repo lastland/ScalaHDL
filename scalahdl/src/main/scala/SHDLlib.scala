@@ -189,7 +189,7 @@ package Core {
     def >=(other: HDLObject): HDLJudgement =
       HDLJudgement(hdl, get, idt, other)
 
-    def ==(other: HDLObject): HDLJudgement =
+    def is(other: HDLObject): HDLJudgement =
       HDLJudgement(hdl, eqt, idt, other)
 
     def +(other: HDLObject): HDLFunc2 =
