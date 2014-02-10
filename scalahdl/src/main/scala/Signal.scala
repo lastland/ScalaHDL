@@ -168,7 +168,7 @@ package ScalaHDL.Core.DataType {
   class Signed(override var name: String, override var _value: Int, _bits: Int)
       extends Unsigned(name, _value, _bits) {
     override def checkValid() {
-      if (Signed.getSize(_value) < _bits)
+      if (Signed.getSize(_value) > _bits)
         throw new NotEnoughBitsException(
           name, _value, Signed.getSize(_value), _bits)
     }
