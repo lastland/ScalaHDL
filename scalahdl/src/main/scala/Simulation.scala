@@ -203,6 +203,10 @@ class Simulator(hdl: ScalaHDL, mods: Seq[module]){
     waiters = exec(maxTime, waiters)
   }
 
+  def setTrace(fileName: String) {
+    trace.start(fileName)
+  }
+
   def continue(maxTime: Int) {
     if (!startRunning)
       throw SimulatorException("Simulator has not been started!")
