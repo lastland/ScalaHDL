@@ -28,12 +28,12 @@ package ScalaHDL.Core.DataType {
     }
   }
 
-  abstract sealed class Signal(val name: String, var _value: Int, _bits: Int) {
+  abstract sealed class Signal(var name: String, var _value: Int, _bits: Int) {
     var eventWaiters: List[Waiter] = List()
     var posedgeWaiters: List[Waiter] = List()
     var negedgeWaiters: List[Waiter] = List()
 
-    var next: Signal = this
+    var next: Int = _value
 
     def value = _value
     def size = _bits
@@ -53,11 +53,11 @@ package ScalaHDL.Core.DataType {
     def update(): List[Waiter] = {
       var lst = eventWaiters
       checkValid()
-      if (_value < next.value)
+      if (_value < next)
         lst = posedgeWaiters ::: lst
-      else if (value > next.value)
+      else if (value > next)
         lst = negedgeWaiters ::: lst
-      _value = next.value
+      _value = next
       lst
     }
 
@@ -82,7 +82,7 @@ package ScalaHDL.Core.DataType {
       value >= other.value
   }
 
-  class Unsigned(override val name: String, override var _value: Int, _bits: Int)
+  class Unsigned(override var name: String, override var _value: Int, _bits: Int)
       extends Signal(name, _value, _bits) {
 
     def this(name: String, _value: Int) {
@@ -149,7 +149,7 @@ package ScalaHDL.Core.DataType {
       "Unsigned %s(value = %d, bits = %d)".format(name, _value, _bits)
   }
 
-  class Bool(override val name: String, override var _value: Int)
+  class Bool(override var name: String, override var _value: Int)
       extends Unsigned(name, _value, 1) {
     override def checkValid() {
       if (_value > 1 || value < 0) {
@@ -165,7 +165,7 @@ package ScalaHDL.Core.DataType {
       "Bool %s(value = %d)".format(name, _value)
   }
 
-  class Signed(override val name: String, override var _value: Int, _bits: Int)
+  class Signed(override var name: String, override var _value: Int, _bits: Int)
       extends Unsigned(name, _value, _bits) {
     override def checkValid() {
       if (Signed.getSize(_value) < _bits)
@@ -223,23 +223,23 @@ package ScalaHDL.Core.DataType {
     def makeUnsignedWithName2(c: Context)(value: c.Expr[Int], bits: c.Expr[Int]) =
       makeCallWithName(c, "mkUnsigned2")
 
-    def signed(value: Int): Unsigned =
+    def signed(value: Int): Signed =
       macro makeSignedWithName1
 
-    def signed(value: Int, bits: Int): Unsigned =
+    def signed(value: Int, bits: Int): Signed =
       macro makeSignedWithName2
 
-    def mkSigned1(name: String, value: Int): Unsigned =
+    def mkSigned1(name: String, value: Int): Signed =
       new Signed(name, value)
 
     def makeSignedWithName1(c: Context)(value: c.Expr[Int]) =
       makeCallWithName(c, "mkSigned1")
 
-    def mkSigned2(name: String, value: Int, bits: Int): Unsigned =
+    def mkSigned2(name: String, value: Int, bits: Int): Signed =
       new Signed(name, value, bits)
 
     def makeSignedWithName2(c: Context)(value: c.Expr[Int], bits: c.Expr[Int]) =
-      makeCallWithName(c, ".mkSigned2")
+      makeCallWithName(c, "mkSigned2")
 
     def bool(value: Int): Bool =
       macro makeBoolWithName

@@ -118,11 +118,12 @@ package Core {
         "assign " + left.convert() + " = " + right.convert() + ";\n"
       else
         left.convert() + " <= " + right.convert() + ";\n"
+
     override def exec(sigMap: HashMap[Symbol, Signal]): Signal = {
       val sig = left.exec(sigMap)
-      sig.next = right.exec(sigMap)
+      sig.next = right.exec(sigMap).value
       hdl.siglist.add(sig)
-      sig.next
+      sig
     }
   }
 
@@ -148,47 +149,60 @@ package Core {
         hdl.currentBlock.top.argsMap(id.name) =
           ArgInfo(v.name, tpe, dir, v.size)
       }
-      ob match {
-        case id: HDLIdent =>
-          hdl.currentBlock.top.senslist += id.name
-        case _ => null
-      }
+      hdl.currentBlock.top.senslist ++= findSenslist(ob)
       a
+    }
+
+    def findSenslist(elem: HDLObject): HashSet[Symbol] = {
+      val ret = new HashSet[Symbol]
+      elem match {
+        case HDLIdent(_, name) =>
+          ret += name
+        case HDLFunc1(_, _, a) =>
+          ret ++= findSenslist(a)
+        case HDLFunc2(_, _, a, b) =>
+          ret ++= findSenslist(a)
+          ret ++= findSenslist(b)
+        case sig: HDLSignal =>
+          null
+        case _ =>
+          throw new RuntimeException("Not supported!")
+      }
+      ret
     }
   }
 
   class HDLType(val idt: HDLIdent, val info: ArgInfo) {
     private val hdl: ScalaHDL = idt.hdl
+    def :=(other: HDLObject): HDLAssignment =
+      HDLAssignment.createAssignment(hdl, idt, other)
 
-    def :=(sig: Signal): HDLAssignment =
-      HDLAssignment.createAssignment(hdl, idt, HDLSignal(hdl, () => sig))
-    def :=(other: HDLType): HDLAssignment =
-      HDLAssignment.createAssignment(hdl, idt, other.idt)
+    def <(other: HDLObject): HDLJudgement =
+      HDLJudgement(hdl, lt, idt, other)
 
-    def <(sig: Signal): HDLJudgement =
-      HDLJudgement(hdl, lt, idt, HDLSignal(hdl, () => sig))
-    def <(other: HDLType): HDLJudgement =
-      HDLJudgement(hdl, lt, idt, other.idt)
+    def <=(other: HDLObject): HDLJudgement =
+      HDLJudgement(hdl, let, idt, other)
 
-    def <=(sig: Signal): HDLJudgement =
-      HDLJudgement(hdl, let, idt, HDLSignal(hdl, () => sig))
-    def <=(other: HDLType): HDLJudgement =
-      HDLJudgement(hdl, let, idt, other.idt)
+    def >(other: HDLObject): HDLJudgement =
+      HDLJudgement(hdl, gt, idt, other)
 
-    def >(sig: Signal): HDLJudgement =
-      HDLJudgement(hdl, gt, idt, HDLSignal(hdl, () => sig))
-    def >(other: HDLType): HDLJudgement =
-      HDLJudgement(hdl, gt, idt, other.idt)
+    def >=(other: HDLObject): HDLJudgement =
+      HDLJudgement(hdl, get, idt, other)
 
-    def >=(sig: Signal): HDLJudgement =
-      HDLJudgement(hdl, get, idt, HDLSignal(hdl, () => sig))
-    def >=(other: HDLType): HDLJudgement =
-      HDLJudgement(hdl, get, idt, other.idt)
+    def ==(other: HDLObject): HDLJudgement =
+      HDLJudgement(hdl, eqt, idt, other)
 
-    def ==(sig: Signal): HDLJudgement =
-      HDLJudgement(hdl, eqt, idt, HDLSignal(hdl, () => sig))
-    def ==(other: HDLType): HDLJudgement =
-      HDLJudgement(hdl, eqt, idt, other.idt)
+    def +(other: HDLObject): HDLFunc2 =
+      new HDLFunc2(hdl, add, idt, other)
+
+    def -(other: HDLObject): HDLFunc2 =
+      new HDLFunc2(hdl, sub, idt, other)
+
+    def *(other: HDLObject): HDLFunc2 =
+      new HDLFunc2(hdl, mul, idt, other)
+
+    def /(other: HDLObject): HDLFunc2 =
+      new HDLFunc2(hdl, div, idt, other)
 
     override def toString =
       "HDLType(" + idt.toString + "," + info.toString + ")"
@@ -251,7 +265,6 @@ package Core {
     def extract() {
       if (_content.isEmpty) {
         if (!hdl.currentBlock.isEmpty) {
-          hdl.currentBlock.top.addStmt(this)
           argsMap ++= hdl.currentBlock.top.argsMap
           sigMap ++= hdl.currentBlock.top.sigMap
         }
@@ -280,7 +293,7 @@ package Core {
 
     cond match {
       case s: _sync =>
-        senslist += s.cond.ident.name
+        senslist += 'clk
       case _ => null
     }
 
@@ -303,8 +316,10 @@ package Core {
 
     override def convert(): String =
       (cond match {
-        case _sync(hdl, cond) =>
-          "always @(" + cond.convert() + ") begin: _" +
+        case _sync(hdl, e) =>
+          "always @(clk." +
+          (if (e == posedge) "posedge"  else "negedge") +
+          ") begin: _" +
             name + "\n" +
             (for (stmt <- content) yield stmt.convert()).mkString("") + "end\n"
         case _async(hdl) =>
@@ -324,12 +339,14 @@ package Core {
 
     def apply(f: => Unit): HDLCondBlock = {
       val b = new HDLCondBlock(hdl, this, "", () => f)
+      hdl.currentBlock.top.addStmt(b)
       b.extract()
       b
     }
 
     def applyDynamic(name: String)(f: => Unit): HDLCondBlock = {
       val b = new HDLCondBlock(hdl, this, name, () => f)
+      hdl.currentBlock.top.addStmt(b)
       b.extract()
       b
     }
@@ -385,21 +402,21 @@ package Core {
     }
 
     def otherwise(f: => Unit): HDLIf = {
-      val b = new HDLIf(hdl, this, null, func)
+      val b = new HDLIf(hdl, this, null, () => f)
       child = b
       b.extract()
       b
     }
 
     def elsewhen(judge: HDLJudgement)(f: => Unit): HDLIf = {
-      val b = new HDLIf(hdl, this, judge, func)
+      val b = new HDLIf(hdl, this, judge, () => f)
       child = b
       b.extract()
       b
     }
   }
 
-  case class _sync(hdl: ScalaHDL, val cond: condition) extends _cond(hdl)
+  case class _sync(hdl: ScalaHDL, val e: Edge) extends _cond(hdl)
 
   case class _async(hdl: ScalaHDL) extends _cond(hdl)
 
@@ -461,8 +478,11 @@ package Core {
     implicit def string2Symbol(s: String) = Symbol(s)
     implicit def int2Signal(value: => Int) = new Signed("", value)
     implicit def int2HDLSignal(value: => Int) = HDLSignal(this, () => int2Signal(value))
-    implicit def symbol2Ident(s: Symbol) = HDLIdent(this, s)
     implicit def signal2HDLSignal(s: Signal) = HDLSignal(this, () => s)
+    implicit def sym2HDLObj(s: Symbol): HDLObject = HDLIdent(this, s)
+    implicit def tpe2HDLIdt(tpe: HDLType): HDLObject = tpe.idt
+    implicit def sig2HDLType(sig: Signal): HDLType = toHDLType(sig)
+    implicit def sym2HDLType(s: Symbol): HDLType = toHDLType(s)
 
     private val hdl: ScalaHDL = this
     private var tmpNum = 0;
@@ -473,8 +493,14 @@ package Core {
     var sigs: Set[Signal] = Set()
     var siglist: HashSet[Signal] = HashSet()
 
-    def sync(c: condition): _sync =
-      new _sync(this, c)
+    def sync(e: Int): _sync =
+      if (e == 1)
+        new _sync(this, posedge)
+      else
+        new _sync(this, negedge)
+
+    def sync(e: Edge): _sync =
+      new _sync(this, e)
 
     def async: _async =
       new _async(this)
@@ -482,8 +508,12 @@ package Core {
     def delay(time: Int): _delay =
       new _delay(this, time)
 
-    def cycle(a: HDLIdent): HDLAssignment =
-      HDLAssignment.createAssignment(hdl, a, HDLFunc1(hdl, sub, a))
+    def cycle(a: HDLObject): HDLAssignment = a match {
+      case id: HDLIdent =>
+        HDLAssignment.createAssignment(hdl, id, HDLFunc1(hdl, sub, id))
+      case _ =>
+        throw new RuntimeException("This parameter must be a HDLIdent!")
+    }
 
     def not(a: HDLObject): HDLFunc1 =
       HDLFunc1(hdl, sub, a)
@@ -493,6 +523,7 @@ package Core {
 
     def when(stmt: HDLJudgement)(f: => Unit): HDLIf = {
       val b = new HDLIf(this, stmt, () => f)
+      currentBlock.top.addStmt(b)
       b.extract()
       b
     }
@@ -511,8 +542,10 @@ package Core {
 
     def toHDLType(name: Symbol): HDLType = new HDLType(
       HDLIdent(this, name), currentBlock.top.argsMap(name))
+
     def toHDLType(sig: Signal): HDLType = {
       val name = unusedName(currentBlock.top.argsMap.keySet)
+      sig.name = name.name
       val info = ArgInfo(name.name, wire, middle, sig.size)
       hdl.currentBlock.top.argsMap += (name -> info)
       hdl.currentBlock.top.sigMap += (name -> sig)

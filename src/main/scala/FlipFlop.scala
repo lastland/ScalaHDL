@@ -8,7 +8,7 @@ import ScalaHDL.Simulation.Simulator
 
 object Main extends ScalaHDL {
   defMod.FlipFlop('d, 'q, 'clk) {
-    sync('clk is 1).logic {
+    sync(1).logic {
       'q := 'd
     }
   }
@@ -18,7 +18,7 @@ object Main extends ScalaHDL {
       cycle('clk)
     }
 
-    sync('clk is 0).stimulus {
+    sync(0).stimulus {
       'd := Random.nextInt(2)
     }
   }

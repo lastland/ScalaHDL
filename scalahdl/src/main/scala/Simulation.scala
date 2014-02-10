@@ -122,7 +122,7 @@ class Simulator(hdl: ScalaHDL, mods: Seq[module]){
             b.cond match {
               case c: _sync =>
                 val w = new SyncWaiter(b.content, hdlmod.sigMap)
-                param_sig(c.cond.ident.name).addWaiter(w, c.cond.edge)
+                param_sig('clk).addWaiter(w, c.e)
                 lst = w :: lst
               case c: _delay =>
                 val w = new DelayWaiter(b.content, hdlmod.sigMap, c.time)
@@ -154,9 +154,12 @@ class Simulator(hdl: ScalaHDL, mods: Seq[module]){
     if (maxTime == 0) return waiters
     while (true) {
       for (sig <- hdl.siglist) {
+        val old = sig.value
         waiters = sig.update() ::: waiters
-        trace.logNew(sig)
+        if (sig.value != old)
+          trace.logNew(sig)
       }
+      waiters = waiters.distinct
       hdl.siglist.clear()
       for (waiter <- waiters) {
         val wl = waiter.next()
@@ -170,7 +173,10 @@ class Simulator(hdl: ScalaHDL, mods: Seq[module]){
       waiters = List()
 
       if (hdl.siglist.isEmpty) {
-        if (futureEvents.isEmpty) return waiters
+        if (futureEvents.isEmpty) {
+          trace.log("#" + maxTime)
+          return waiters
+        }
         val spans = futureEvents.span(_._1 == futureEvents.head._1)
         val events = spans._1
         futureEvents = spans._2
