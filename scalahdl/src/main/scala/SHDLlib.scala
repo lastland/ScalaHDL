@@ -387,7 +387,8 @@ package Core {
       (if (parent != null) "else " else "") +
       (if (judge != null) "if (" + judge.convert() + ") " else "") +
       "begin\n" +
-      content.map(_.convert()).mkString("") + "end\n"
+      content.map(_.convert()).mkString("") + "end\n" +
+      (if (child != null) child.convert() else "")
 
     override def exec(sigMap: HashMap[Symbol, Signal]): Signal = {
       if (judge == null || judge.exec(sigMap).value > 0) {
