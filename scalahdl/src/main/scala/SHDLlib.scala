@@ -111,7 +111,7 @@ package Core {
 
     override def exec(sigMap: HashMap[Symbol, Signal]): Signal = {
       val sig = left.exec(sigMap)
-      sig.next = right.exec(sigMap).value
+      sig.setNext(right.exec(sigMap).value)
       hdl.siglist.add(sig)
       sig
     }

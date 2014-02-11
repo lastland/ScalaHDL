@@ -33,12 +33,16 @@ package ScalaHDL.Core.DataType {
     var posedgeWaiters: List[Waiter] = List()
     var negedgeWaiters: List[Waiter] = List()
 
-    var next: Int = _value
+    protected var next: Int = _value
 
     def value = _value
     def size = _bits
 
     checkValid()
+
+    def setNext(n: Int) {
+      next = n
+    }
 
     def addWaiter(w: Waiter) {
       eventWaiters = w :: eventWaiters
@@ -96,6 +100,14 @@ package ScalaHDL.Core.DataType {
       this(name, _value, Unsigned.getSize(_value))
     }
 
+    override def setNext(n: Int) {
+      if (n >= 0) {
+        next = n
+      } else {
+        next = math.pow(2, _bits).toInt + n
+      }
+    }
+
     override def checkValid() {
       if (_value < 0) {
         throw new IllegalArgumentException("the value cannot be less than 0")
@@ -118,10 +130,11 @@ package ScalaHDL.Core.DataType {
     }
 
     override def -(other: Signal) = {
-      val s = List(size, other.size).max
       other match {
-        case x: Unsigned => new Unsigned("", _value - other.value, s)
-        case _ => throw new RuntimeException("Not supported yet!") // TODO: support signed
+        case x: Signed => new Signed("", _value - other.value,
+          List(size + 1, other.size).max)
+        case x: Unsigned => new Signed("", _value - other.value,
+          List(size, other.size).max + 1)
       }
     }
 
