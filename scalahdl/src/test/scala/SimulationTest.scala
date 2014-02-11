@@ -2,6 +2,7 @@ import org.scalatest.Suite
 import org.scalatest.PrivateMethodTester
 import scala.util.Random
 import scala.collection.mutable.PriorityQueue
+import scala.collection.mutable.HashMap
 
 import ScalaHDL.Simulation._
 import ScalaHDL.Core._
@@ -10,19 +11,20 @@ import ScalaHDL.Core.DataType._
 class SimulationTest extends Suite with PrivateMethodTester {
 
   object Mod1 extends ScalaHDL {
-    sync('clk is 1)
-    defMod.logic('d, 'q, 'clk) {
-      'q := 'd
+    defMod.FlipFlop('d, 'q, 'clk) {
+      sync(1).logic {
+        'q := 'd
+      }
     }
 
-    delay(10)
-    defMod.clkGen('clk) {
-      cycle('clk)
-    }
+    defMod.Bench('d, 'q, 'clk) {
+      delay(10).clkGen {
+        cycle('clk)
+      }
 
-    sync('clk is 0)
-    defMod.stimulus('d, 'clk) {
-      'd := Random.nextInt(2)
+      sync(0).stimulus {
+        'd := Random.nextInt(2)
+      }
     }
   }
 
@@ -31,13 +33,11 @@ class SimulationTest extends Suite with PrivateMethodTester {
    */
   def testWire() {
     val wire = PrivateMethod[List[Waiter]]('wire)
-    val q = new Signal("q", 0, 1)
-    val d = new Signal("d", 1, 1)
-    val clk = new Signal("clk", 0, 1)
-    val mods = List(new module('logic, d, q, clk),
-      new module('clkGen, clk),
-      new module('stimulus, d, clk)
-    )
+    val q = new Bool("q", 0)
+    val d = new Bool("d", 1)
+    val clk = new Bool("clk", 0)
+    val mods = List(new module('FlipFlop, d, q, clk),
+      new module('Bench, d, q, clk))
     val sim = new Simulator(Mod1, mods)
     val lst = sim invokePrivate wire(mods)
     assert(Mod1.sigs.size === 3)
@@ -55,14 +55,12 @@ class SimulationTest extends Suite with PrivateMethodTester {
   }
 
   def testSimulateAndContinue() {
-    val q = new Signal("q", 0)
-    val d = new Signal("d", 0)
-    val clk = new Signal("clk", 0)
-    val sim = new Simulator(Mod1, List(
-      new module('logic, d, q, clk),
-      new module('clkGen, clk),
-      new module('stimulus, d, clk)
-    ))
+    val q = new Bool("q", 0)
+    val d = new Bool("d", 0)
+    val clk = new Bool("clk", 0)
+    val mods = List(new module('FlipFlop, d, q, clk),
+      new module('Bench, d, q, clk))
+    val sim = new Simulator(Mod1, mods)
 
     val getNow = PrivateMethod[Int]('getNow)
     var now = 10
@@ -71,11 +69,11 @@ class SimulationTest extends Suite with PrivateMethodTester {
     for (i <- 1 to 100) {
       now += 10
       sim.continue(10)
-      assert(clk === new Signal("clk", 0))
+      assert(clk === new Bool("clk", 0))
       assert((sim invokePrivate getNow()) === now)
       now += 10
       sim.continue(10)
-      assert(clk === new Signal("clk", 1))
+      assert(clk === new Bool("clk", 1))
       assert(q.value === d.value)
       assert((sim invokePrivate getNow()) === now)
     }
@@ -84,14 +82,12 @@ class SimulationTest extends Suite with PrivateMethodTester {
   }
 
   def testRestart() {
-    val q = new Signal("q", 0)
-    val d = new Signal("d", 0)
-    val clk = new Signal("clk", 0)
-    val sim = new Simulator(Mod1, List(
-      new module('logic, d, q, clk),
-      new module('clkGen, clk),
-      new module('stimulus, d, clk)
-    ))
+    val q = new Bool("q", 0)
+    val d = new Bool("d", 0)
+    val clk = new Bool("clk", 0)
+    val mods = List(new module('FlipFlop, d, q, clk),
+      new module('Bench, d, q, clk))
+    val sim = new Simulator(Mod1, mods)
     sim.simulate(1000)
     sim.continue(1000)
     sim.stop()
@@ -116,14 +112,12 @@ class SimulationTest extends Suite with PrivateMethodTester {
   }
 
   def testIllegalUsage() {
-    val q = new Signal("q", 0)
-    val d = new Signal("d", 0)
-    val clk = new Signal("clk", 0)
-    val sim = new Simulator(Mod1, List(
-      new module('logic, d, q, clk),
-      new module('clkGen, clk),
-      new module('stimulus, d, clk)
-    ))
+    val q = new Bool("q", 0)
+    val d = new Bool("d", 0)
+    val clk = new Bool("clk", 0)
+    val mods = List(new module('FlipFlop, d, q, clk),
+      new module('Bench, d, q, clk))
+    val sim = new Simulator(Mod1, mods)
     intercept[SimulatorException] {
       sim.continue(10)
     }
@@ -141,7 +135,7 @@ class SimulationTest extends Suite with PrivateMethodTester {
    * This test is HDL unrelated.
    */
   def testSchedule() {
-    val getWaiter = (t: Int) => (t, new SyncWaiter(List(), Map()))
+    val getWaiter = (t: Int) => (t, new SyncWaiter(List(), new HashMap()))
     val lst = List(
       getWaiter(100),
       getWaiter(200),
