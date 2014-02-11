@@ -304,9 +304,9 @@ package Core {
     override def convert(): String =
       (cond match {
         case _sync(hdl, e) =>
-          "always @(clk." +
+          "always @(" +
           (if (e == posedge) "posedge"  else "negedge") +
-          ") begin: _" +
+          " clk) begin: _" +
             name + "\n" +
             (for (stmt <- content) yield stmt.convert()).mkString("") + "end\n"
         case _async(hdl) =>
