@@ -123,3 +123,117 @@ class UnsignedTest extends Suite {
       new Signed("", -15, 5))
   }
 }
+
+class SignedTest extends Suite {
+
+  def testValid() {
+    assert(new Signed("", 0, 1).value === 0)
+    assert(new Signed("", 1, 2).value === 1)
+    assert(new Signed("", 5, 4).value === 5)
+    assert(new Signed("", -5, 4).value === -5)
+    intercept[NotEnoughBitsException] {
+      new Signed("", -1, 1)
+    }
+    intercept[NotEnoughBitsException] {
+      new Signed("", 0, 0)
+    }
+    intercept[NotEnoughBitsException] {
+      new Signed("", 5, 1)
+    }
+    intercept[NotEnoughBitsException] {
+      new Signed("", 32, 5)
+    }
+  }
+
+  def testSetNext() {
+    val a = new Signed("", 0, 5)
+    assert(a.value === 0)
+    SignalTestHelper.setAndTest(a, 1)
+    assert(a.value === 1)
+    SignalTestHelper.setAndTest(a, 15)
+    assert(a.value === 15)
+    SignalTestHelper.setAndTest(a, 16)
+    assert(a.value === 0)
+    SignalTestHelper.setAndTest(a, 31)
+    assert(a.value === 15)
+    SignalTestHelper.setAndTest(a, -1)
+    assert(a.value === -1)
+    SignalTestHelper.setAndTest(a, -15)
+    assert(a.value === -15)
+  }
+
+  def testOpposite() {
+    assert(new Signed("", 0, 1).opposite === new Signed("", 0, 1))
+    assert(new Signed("", 1, 2).opposite === new Signed("", -1, 2))
+    assert(new Signed("", 10, 5).opposite === new Signed("", -10, 5))
+    assert(new Signed("", 31, 6).opposite === new Signed("", -31, 6))
+  }
+
+  def testAdd() {
+    assert(new Signed("", 0, 1) + new Signed("", 1, 2) ===
+      new Signed("", 1, 2))
+    assert(new Signed("", 15, 5) + new Signed("", 15, 5) ===
+      new Signed("", 30, 6))
+    assert(new Signed("", 1, 2) + new Signed("", 15, 5) ===
+      new Signed("", 16, 6))
+    assert(new Signed("", 0, 1) + new Signed("", -1, 2) ===
+      new Signed("", -1, 2))
+    assert(new Signed("", 3, 3) + new Signed("", -15, 5) ===
+      new Signed("", -12, 5))
+    assert(new Signed("", 15, 5) + new Signed("", -15, 5) ===
+      new Signed("", 0, 1))
+    assert(new Signed("", 15, 5) + new Signed("", -1, 2) ===
+      new Signed("", 14, 5))
+  }
+
+  def testMinus() {
+    assert(new Signed("", 0, 1) - new Signed("", 1, 3) ===
+      new Signed("", -1, 2))
+    assert(new Signed("", 15, 5) - new Signed("", 15, 5) ===
+      new Signed("", 0, 1))
+    assert(new Signed("", 1, 2) - new Signed("", 15, 5) ===
+      new Signed("", -14, 5))
+    assert(new Signed("", 0, 1) - new Signed("", -1, 2) ===
+      new Signed("", 1, 2))
+    assert(new Signed("", 3, 3) - new Signed("", -15, 5) ===
+      new Signed("", 18, 6))
+    assert(new Signed("", 15, 5) - new Signed("", -15, 5) ===
+      new Signed("", 30, 6))
+    assert(new Signed("", 15, 5) - new Signed("", -1, 2) ===
+      new Signed("", 16, 6))
+  }
+
+  def testTimes() {
+    assert(new Signed("", 1, 2) * new Signed("", 1, 2) ===
+      new Signed("", 1, 2))
+    assert(new Signed("", 15, 5) * new Signed("", 15, 5) ===
+      new Signed("", 225, 9))
+    assert(new Signed("", 1, 2) * new Signed("", 15, 5) ===
+      new Signed("", 15, 5))
+    assert(new Signed("", 1, 2) * new Signed("", -1, 2) ===
+      new Signed("", -1, 2))
+    assert(new Signed("", 3, 3) * new Signed("", -15, 5) ===
+      new Signed("", -45, 7))
+    assert(new Signed("", 15, 5) * new Signed("", -15, 5) ===
+      new Signed("", -225, 9))
+    assert(new Signed("", 15, 5) * new Signed("", -1, 2) ===
+      new Signed("", -15, 5))
+  }
+
+  def testDivide() {
+    assert(new Signed("", 1, 2) / new Signed("", 1, 2) ===
+      new Signed("", 1, 2))
+    assert(new Signed("", 15, 5) / new Signed("", 15, 5) ===
+      new Signed("", 1, 2))
+    assert(new Signed("", 1, 2) / new Signed("", 15, 5) ===
+      new Signed("", 0, 1))
+    assert(new Signed("", 1, 2) / new Signed("", -1, 2) ===
+      new Signed("", -1, 2))
+    assert(new Signed("", 3, 3) / new Signed("", -15, 5) ===
+      new Signed("", 0, 1))
+    assert(new Signed("", 15, 5) / new Signed("", -15, 5) ===
+      new Signed("", -1, 2))
+    assert(new Signed("", 15, 5) / new Signed("", -1, 2) ===
+      new Signed("", -15, 5))
+  }
+}
