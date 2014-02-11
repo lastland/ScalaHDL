@@ -102,7 +102,7 @@ package ScalaHDL.Core.DataType {
 
     override def setNext(n: Int) {
       if (n >= 0) {
-        next = n
+        next = n % math.pow(2, _bits).toInt
       } else {
         next = math.pow(2, _bits).toInt + n
       }
@@ -122,36 +122,38 @@ package ScalaHDL.Core.DataType {
       new Unsigned("", (1 << _bits) - 1 - _value, _bits)
 
     override def +(other: Signal) = {
-      val s = List(size, other.size, Unsigned.getSize(value + other.value)).max
-      other match {
-        case x: Unsigned => new Unsigned("", _value + other.value, s)
-        case _ => throw new RuntimeException("Not supported yet!") // TODO: support signed
+      val res = _value + other.value
+      if (res >= 0) {
+        new Unsigned("", res)
+      } else {
+        new Signed("", res)
       }
     }
 
     override def -(other: Signal) = {
-      other match {
-        case x: Signed => new Signed("", _value - other.value,
-          List(size + 1, other.size).max)
-        case x: Unsigned => new Signed("", _value - other.value,
-          List(size, other.size).max + 1)
+      val res = _value - other.value
+      if (res >= 0) {
+        new Unsigned("", res)
+      } else {
+        new Signed("", res)
       }
     }
 
     override def *(other: Signal) = {
-      val s = List(size, other.size, Unsigned.getSize(value * other.value)).max
-        other match {
-          case x: Unsigned => new Unsigned("", _value * other.value, s)
-          case _ => throw new RuntimeException("Not supported yet!") // TODO: support signed
-        }
+      val res = _value * other.value
+      if (res >= 0) {
+        new Unsigned("", res)
+      } else {
+        new Signed("", res)
+      }
     }
 
     override def /(other: Signal) = {
-      val s = List(size, other.size).max
-      other match {
-        // don't need to report / 0 myself
-        case x: Unsigned => new Unsigned("", _value / other.value, s)
-        case _ => throw new RuntimeException("Not supported yet!") // TODO: support signed
+      val res = _value / other.value
+      if (res >= 0) {
+        new Unsigned("", res)
+      } else {
+        new Signed("", res)
       }
     }
 
