@@ -163,6 +163,10 @@ package ScalaHDL.Core.DataType {
 
   class Bool(override var name: String, override var _value: Int)
       extends Unsigned(name, _value, 1) {
+    override def setNext(n: Int) {
+      next = n % 2
+    }
+
     override def checkValid() {
       if (_value > 1 || value < 0) {
         throw new NotEnoughBitsException(
@@ -179,6 +183,11 @@ package ScalaHDL.Core.DataType {
 
   class Signed(override var name: String, override var _value: Int, _bits: Int)
       extends Unsigned(name, _value, _bits) {
+
+    override def setNext(n: Int) {
+      next = n % math.pow(2, _bits - 1).toInt
+    }
+
     override def checkValid() {
       if (Signed.getSize(_value) > _bits)
         throw new NotEnoughBitsException(
@@ -192,25 +201,17 @@ package ScalaHDL.Core.DataType {
     override def opposite() =
       new Signed("", -value, _bits)
 
-    override def +(other: Signal) = {
-      val s = List(size, other.size, Signed.getSize(value + other.value)).max
-      new Signed("", _value + other.value, s)
-    }
+    override def +(other: Signal) =
+      new Signed("", _value + other.value)
 
-    override def -(other: Signal) = {
-      val s = List(size, other.size).max
-      new Signed("", _value - other.value, s)
-    }
+    override def -(other: Signal) =
+      new Signed("", _value - other.value)
 
-    override def *(other: Signal) = {
-      val s = List(size, other.size, Signed.getSize(value * other.value)).max
-      new Signed("", _value * other.value, s)
-    }
+    override def *(other: Signal) =
+      new Signed("", _value * other.value)
 
-    override def /(other: Signal) = {
-      val s = List(size, other.size).max
-      new Signed("", _value / other.value, s)
-    }
+    override def /(other: Signal) =
+      new Signed("", _value / other.value)
 
     override def toString(): String =
       "Signed %s(value = %d, bits = %d)".format(name, _value, _bits)
