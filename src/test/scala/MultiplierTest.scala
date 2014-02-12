@@ -29,7 +29,7 @@ class MultiplierTest extends FunSuite with TestHelper {
     val b = unsigned(0, 4)
     val z = unsigned(0, 8)
 
-    val Z = List(0, 0, 0, 1, 15, 15, 225).iterator
+    val Z = List(0, 0, 0, 0, 1, 15, 15, 225).iterator
 
     val sim = Simulator(MultiplierTestBench,
       module('mult, clk, rst, a, b, z),

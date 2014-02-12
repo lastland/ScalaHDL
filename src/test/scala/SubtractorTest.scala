@@ -29,7 +29,7 @@ class SubtractorTest extends FunSuite with TestHelper {
     val b = unsigned(0, 4)
     val z = unsigned(0, 5)
 
-    val Z = List(0, 31, 1, 0, 15, 17, 0).iterator
+    val Z = List(0, 0, 31, 1, 0, 15, 17, 0).iterator
 
     val sim = Simulator(SubtractorTestBench,
       module('sub, clk, rst, a, b, z),

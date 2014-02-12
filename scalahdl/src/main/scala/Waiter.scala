@@ -10,8 +10,8 @@ class Waiter(stmts: Seq[HDLObject], val sigMap: HashMap[Symbol, Signal]) {
     iterator[List[Waiter]] {
       var senslist: List[Waiter] = List()
       while (true) {
-        for (stmt <- stmts) stmt.exec(sigMap)
         yld(senslist)
+        for (stmt <- stmts) stmt.exec(sigMap)
       }
     }
 
@@ -30,8 +30,8 @@ class DelayWaiter(stmts: Seq[HDLObject], override val sigMap: HashMap[Symbol, Si
     iterator[List[Waiter]] {
       var senslist: List[Waiter] = List(this)
       while (true) {
-        for (stmt <- stmts) stmt.exec(sigMap)
         yld(senslist)
+        for (stmt <- stmts) stmt.exec(sigMap)
       }
     }
 

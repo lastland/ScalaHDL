@@ -31,7 +31,7 @@ class FifoTest extends FunSuite with TestHelper {
     val input = unsigned(0, FifoTestBench.WIDTH)
     val output = unsigned(0, FifoTestBench.WIDTH)
 
-    val OUTPUT = List(0, 0, 0, 7, 0, 3, 0, 1).iterator
+    val OUTPUT = List(0, 0, 0, 0, 7, 0, 3, 0, 1).iterator
 
     val sim = Simulator(FifoTestBench,
       module('fifo, clk, rst, input, output),

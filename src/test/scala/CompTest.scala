@@ -29,7 +29,7 @@ class CompTest extends FunSuite with TestHelper {
     val b = unsigned(0, 5)
     val z = signed(0, 2)
 
-    val Z = List(0, -1, 1, 0, 1, -1, 0).iterator
+    val Z = List(0, 0, -1, 1, 0, 1, -1, 0).iterator
 
     val sim = Simulator(CompTestBench,
       module('comp, clk, rst, a, b, z),
