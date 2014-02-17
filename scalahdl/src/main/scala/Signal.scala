@@ -69,6 +69,19 @@ package ScalaHDL.Core.DataType {
 
     def opposite(): Signal
 
+    def &(other: Signal): Signal
+    def |(other: Signal): Signal
+    def ^(other: Signal): Signal
+
+    def &&(other: Signal): Signal =
+      throw new RuntimeException("Only support for Bool!")
+    def ||(other: Signal): Signal =
+      throw new RuntimeException("Only support for Bool!")
+
+    def unary_~(): Signal
+    def unary_!(): Signal =
+      throw new RuntimeException("Only support for Bool!")
+
     def +(other: Signal): Signal
     def -(other: Signal): Signal
     def *(other: Signal): Signal
@@ -121,6 +134,9 @@ package ScalaHDL.Core.DataType {
     override def opposite() =
       new Unsigned("", (1 << _bits) - 1 - _value, _bits)
 
+    override def unary_~(): Signal =
+      throw new RuntimeException("Not supported yet!")
+
     override def +(other: Signal) = {
       val res = _value + other.value
       if (res >= 0) {
@@ -157,6 +173,30 @@ package ScalaHDL.Core.DataType {
       }
     }
 
+    override def &(other: Signal) = {
+      val res = _value & other.value
+      if (res >= 0)
+        new Unsigned("", res)
+      else
+        new Signed("", res)
+    }
+
+    override def |(other: Signal) = {
+      val res = _value | other.value
+      if (res >= 0)
+        new Unsigned("", res)
+      else
+        new Signed("", res)
+    }
+
+    override def ^(other: Signal) = {
+      val res = _value ^ other.value
+      if (res >= 0)
+        new Unsigned("", res)
+      else
+        new Signed("", res)
+    }
+
     override def toString(): String =
       "Unsigned %s(value = %d, bits = %d)".format(name, _value, _bits)
   }
@@ -176,6 +216,22 @@ package ScalaHDL.Core.DataType {
 
     override def opposite() =
       new Bool("", 1 - _value)
+
+    override def unary_~() =
+      new Bool("", 1 - _value)
+
+    override def unary_!() =
+      new Bool("", 1 - _value)
+
+    override def &&(other: Signal) = other match {
+      case b: Bool => new Bool("", _value & b.value)
+      case _ => throw new RuntimeException("only support for Bool!")
+    }
+
+    override def ||(other: Signal) = other match {
+      case b: Bool => new Bool("", _value | b.value)
+      case _ => throw new RuntimeException("only support for Bool!")
+    }
 
     override def toString(): String =
       "Bool %s(value = %d)".format(name, _value)

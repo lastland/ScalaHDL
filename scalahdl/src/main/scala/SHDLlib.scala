@@ -32,9 +32,17 @@ package Core {
    * HDL Operations.
    */
 
+  object HDLPrefixOperator extends Enumeration {
+    type HDLPrefixOperator = Value
+    val logic_not, negation = Value
+  }
+  import HDLPrefixOperator._
+
   object HDLOperation extends Enumeration {
     type HDLOperation = Value
-    val add, sub, mul, div = Value
+    val add, sub, mul, div,
+      bitwise_and, bitwise_or, bitwise_xor,
+      logic_and, logic_or = Value
   }
   import HDLOperation._
 
@@ -65,16 +73,22 @@ package Core {
   abstract sealed class HDLFunc(hdl: ScalaHDL) extends HDLObject(hdl)
 
   case class HDLFunc1 (hdl: ScalaHDL,
-    op: HDLOperation, a: HDLObject) extends HDLFunc(hdl) {
-    override def convert(): String = op match {
-      case `add` => " + " + a.convert()
-      case `sub` => " - " + a.convert()
-      case `mul` => " * " + a.convert()
-      case `div` => " / " + a.convert()
+    op: HDLPrefixOperator, a: HDLObject) extends HDLFunc(hdl) {
+    override def convert(): String = {
+      val s = a match {
+        case id: HDLIdent => a.convert()
+        case _ => "(" + a.convert() + ")"
+      }
+      op match {
+      case `logic_not` => "!" + s
+      case `negation` =>  "~" + s
+    }
     }
     override def exec(sigMap: HashMap[Symbol, Signal]): Signal = op match {
-      case `sub` => val b = a.exec(sigMap)
-        b.opposite
+      case `negation` => val b = a.exec(sigMap)
+        ~b
+      case `logic_not` => val b = a.exec(sigMap)
+        !b
       case _ => a.exec(sigMap)
     }
   }
@@ -86,7 +100,13 @@ package Core {
       case `sub` => a.convert() + " - " + b.convert()
       case `mul` => a.convert() + " * " + b.convert()
       case `div` => a.convert() + " / " + b.convert()
+      case `bitwise_and` => a.convert() + " & " + b.convert()
+      case `bitwise_or`  => a.convert() + " | " + b.convert()
+      case `bitwise_xor` => a.convert() + " ^ " + b.convert()
+      case `logic_and` => a.convert() + " && " + b.convert()
+      case `logic_or` => a.convert() + " || " + b.convert()
     }
+
     override def exec(sigMap: HashMap[Symbol, Signal]): Signal = {
       val sa = a.exec(sigMap)
       val sb = b.exec(sigMap)
@@ -97,7 +117,20 @@ package Core {
         case `sub` => sa - sb
         case `mul` => sa * sb
         case `div` => sa / sb
+        case `bitwise_and` => sa & sb
+        case `bitwise_or` => sa | sb
+        case `bitwise_xor` => sa ^ sb
+        case `logic_and` => sa && sb
+        case `logic_or` => sa || sb
       }
+    }
+
+    def unary_!(): HDLFunc1 = {
+      HDLFunc1(hdl, logic_not, this)
+    }
+
+    def unary_~(): HDLFunc1 = {
+      HDLFunc1(hdl, negation, this)
     }
   }
 
@@ -183,16 +216,31 @@ package Core {
       HDLJudgement(hdl, eqt, idt, other)
 
     def +(other: HDLObject): HDLFunc2 =
-      new HDLFunc2(hdl, add, idt, other)
+      HDLFunc2(hdl, add, idt, other)
 
     def -(other: HDLObject): HDLFunc2 =
-      new HDLFunc2(hdl, sub, idt, other)
+      HDLFunc2(hdl, sub, idt, other)
 
     def *(other: HDLObject): HDLFunc2 =
-      new HDLFunc2(hdl, mul, idt, other)
+      HDLFunc2(hdl, mul, idt, other)
 
     def /(other: HDLObject): HDLFunc2 =
-      new HDLFunc2(hdl, div, idt, other)
+      HDLFunc2(hdl, div, idt, other)
+
+    def &(other: HDLObject): HDLFunc2 =
+      HDLFunc2(hdl, bitwise_and, idt, other)
+
+    def |(other: HDLObject): HDLFunc2 =
+      HDLFunc2(hdl, bitwise_or, idt, other)
+
+    def ^(other: HDLObject): HDLFunc2 =
+      HDLFunc2(hdl, bitwise_xor, idt, other)
+
+    def &&(other: HDLObject): HDLFunc2 =
+      HDLFunc2(hdl, logic_and, idt, other)
+
+    def ||(other: HDLObject): HDLFunc2 =
+      HDLFunc2(hdl, logic_or, idt, other)
 
     override def toString =
       "HDLType(" + idt.toString + "," + info.toString + ")"
@@ -200,12 +248,6 @@ package Core {
 
   case class HDLIdent(hdl: ScalaHDL, name: Symbol)
       extends HDLObject(hdl) {
-    def +(other: HDLObject) = HDLFunc2(hdl, add, this, other)
-    def -(other: HDLObject) = HDLFunc2(hdl, sub, this, other)
-    def *(other: HDLObject) = HDLFunc2(hdl, mul, this, other)
-    def /(other: HDLObject) = HDLFunc2(hdl, div, this, other)
-    def :=(other: HDLObject) = HDLAssignment.createAssignment(
-      hdl, this, other)
     override def convert(): String = name.name
     override def exec(sigMap: HashMap[Symbol, Signal]) = sigMap(name)
 
@@ -498,13 +540,10 @@ package Core {
 
     def cycle(a: HDLObject): HDLAssignment = a match {
       case id: HDLIdent =>
-        HDLAssignment.createAssignment(hdl, id, HDLFunc1(hdl, sub, id))
+        HDLAssignment.createAssignment(hdl, id, HDLFunc1(hdl, negation, id))
       case _ =>
         throw new RuntimeException("This parameter must be a HDLIdent!")
     }
-
-    def not(a: HDLObject): HDLFunc1 =
-      HDLFunc1(hdl, sub, a)
 
     def module(name: Symbol, sigs: Signal*): module =
       new module(name, sigs: _*)
