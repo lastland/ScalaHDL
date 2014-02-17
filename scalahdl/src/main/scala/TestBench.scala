@@ -46,7 +46,8 @@ class SimulatorForTest(hdl: ScalaHDL, mods: Seq[module])
     var now = 0
     while (!tasks.isEmpty) {
       val (time, task) = tasks.dequeue
-      continue(time - now)
+      if (time > now)
+        continue(time - now)
       task()
       now = time
     }

@@ -13,6 +13,15 @@ package ScalaHDL.Core.DataType {
   }
   import Edge._
 
+  private object Signal {
+    def mkSignal(value: Int): Signal = {
+      if (value < 0)
+        new Signed("", value)
+      else
+        new Unsigned("", value)
+    }
+  }
+
   private object Unsigned {
     def getSize(value: Int): Int = {
       value.abs.toBinaryString.size
@@ -86,6 +95,10 @@ package ScalaHDL.Core.DataType {
     def -(other: Signal): Signal
     def *(other: Signal): Signal
     def /(other: Signal): Signal
+    def %(other: Signal): Signal
+
+    def <<(other: Signal): Signal
+    def >>(other: Signal): Signal
 
     def <(other: Signal): Boolean =
       value < other.value
@@ -137,65 +150,35 @@ package ScalaHDL.Core.DataType {
     override def unary_~(): Signal =
       throw new RuntimeException("Not supported yet!")
 
-    override def +(other: Signal) = {
-      val res = _value + other.value
-      if (res >= 0) {
-        new Unsigned("", res)
-      } else {
-        new Signed("", res)
-      }
-    }
+    override def +(other: Signal) =
+      Signal.mkSignal(value + other.value)
 
-    override def -(other: Signal) = {
-      val res = _value - other.value
-      if (res >= 0) {
-        new Unsigned("", res)
-      } else {
-        new Signed("", res)
-      }
-    }
+    override def -(other: Signal) =
+      Signal.mkSignal(value - other.value)
 
-    override def *(other: Signal) = {
-      val res = _value * other.value
-      if (res >= 0) {
-        new Unsigned("", res)
-      } else {
-        new Signed("", res)
-      }
-    }
+    override def *(other: Signal) =
+      Signal.mkSignal(value * other.value)
 
-    override def /(other: Signal) = {
-      val res = _value / other.value
-      if (res >= 0) {
-        new Unsigned("", res)
-      } else {
-        new Signed("", res)
-      }
-    }
+    override def /(other: Signal) =
+      Signal.mkSignal(value / other.value)
 
-    override def &(other: Signal) = {
-      val res = _value & other.value
-      if (res >= 0)
-        new Unsigned("", res)
-      else
-        new Signed("", res)
-    }
+    override def %(other: Signal) =
+      Signal.mkSignal(value % other.value)
 
-    override def |(other: Signal) = {
-      val res = _value | other.value
-      if (res >= 0)
-        new Unsigned("", res)
-      else
-        new Signed("", res)
-    }
+    override def &(other: Signal) =
+      Signal.mkSignal(value & other.value)
 
-    override def ^(other: Signal) = {
-      val res = _value ^ other.value
-      if (res >= 0)
-        new Unsigned("", res)
-      else
-        new Signed("", res)
-    }
+    override def |(other: Signal) =
+      Signal.mkSignal(value | other.value)
+
+    override def ^(other: Signal) =
+      Signal.mkSignal(value ^ other.value)
+
+    override def <<(other: Signal) =
+      Signal.mkSignal(value << other.value)
+
+    override def >>(other: Signal) =
+      Signal.mkSignal(value >> other.value)
 
     override def toString(): String =
       "Unsigned %s(value = %d, bits = %d)".format(name, _value, _bits)
