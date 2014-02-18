@@ -124,13 +124,11 @@ package Core {
     def >>(other: HDLObject): HDLFunc2 =
       HDLFunc2(hdl, shr, this, other)
 
-    def unary_!(): HDLFunc1 = {
+    def unary_!(): HDLFunc1 =
       HDLFunc1(hdl, logic_not, this)
-    }
 
-    def unary_~(): HDLFunc1 = {
+    def unary_~(): HDLFunc1 =
       HDLFunc1(hdl, negation, this)
-    }
   }
 
   abstract sealed class HDLFunc(hdl: ScalaHDL) extends HDLObject(hdl)
