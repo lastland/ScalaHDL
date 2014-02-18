@@ -25,9 +25,9 @@ class SubtractorTest extends FunSuite with TestHelper {
   test("test subtractor") {
     val clk = bool(0)
     val rst = bool(1)
-    val a = unsigned(0, 4)
-    val b = unsigned(0, 4)
-    val z = unsigned(0, 5)
+    val a = unsigned(0, SubtractorTestBench.size)
+    val b = unsigned(0, SubtractorTestBench.size)
+    val z = unsigned(0, SubtractorTestBench.size + 1)
 
     val Z = List(0, 0, 31, 1, 0, 15, 17, 0).iterator
 

@@ -7,12 +7,15 @@ import ScalaHDL.Core.DataType.Signals._
 import ScalaHDL.Simulation.Simulator
 
 trait Subtractor extends ScalaHDL {
+
+  val size = 4
+
   defMod.sub('clk, 'rst, 'a, 'b, 'z) {
     sync(1).sub {
       when ('rst is 1) {
         'z := 0
       } .otherwise {
-        'z := 'a - 'b
+        'z := ('a - 'b) % math.pow(2, size + 1).toInt
       }
     }
   }
@@ -24,7 +27,7 @@ object Main extends Subtractor {
     val rst = bool(0)
     val a = signed(0, 4)
     val b = signed(0, 4)
-    val z = signed(0, 8)
+    val z = signed(0, 5)
 
     println(convert('sub, clk, rst, a, b, z))
   }

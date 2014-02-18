@@ -30,7 +30,6 @@ class UnsignedTest extends Suite {
     }
   }
 
-
   def testSetNext() {
     val a = new Unsigned("", 0, 4)
     assert(a.value === 0)
