@@ -30,10 +30,13 @@ package ScalaHDL.Core.DataType {
 
   private object Signed {
     def getSize(value: Int): Int = {
-      val r = value.abs.toBinaryString.size
-      if (value != 0)
-        r + 1
-      else r
+      val s = value.toBinaryString
+      if (value < 0)
+        ("1" + s.dropWhile(_ == '1')).size
+      else if (value == 0)
+        1
+      else
+        s.size + 1
     }
   }
 
@@ -47,7 +50,7 @@ package ScalaHDL.Core.DataType {
     def value = _value
     def size = _bits
 
-    checkValid()
+    checkValid(_value)
 
     def setNext(n: Int) {
       next = n
@@ -65,7 +68,7 @@ package ScalaHDL.Core.DataType {
 
     def update(): List[Waiter] = {
       var lst = eventWaiters
-      checkValid()
+      checkValid(next)
       if (_value < next)
         lst = posedgeWaiters ::: lst
       else if (value > next)
@@ -74,7 +77,7 @@ package ScalaHDL.Core.DataType {
       lst
     }
 
-    def checkValid(): Unit
+    def checkValid(num: Int): Unit
 
     def opposite(): Signal
 
@@ -126,21 +129,13 @@ package ScalaHDL.Core.DataType {
       this(name, _value, Unsigned.getSize(_value))
     }
 
-    override def setNext(n: Int) {
-      if (n >= 0) {
-        next = n % math.pow(2, _bits).toInt
-      } else {
-        next = math.pow(2, _bits).toInt + n
-      }
-    }
-
-    override def checkValid() {
-      if (_value < 0) {
+    override def checkValid(num: Int) {
+      if (num < 0) {
         throw new IllegalArgumentException("the value cannot be less than 0")
       }
-      if (Unsigned.getSize(_value) > _bits) {
+      if (Unsigned.getSize(num) > _bits) {
         throw new NotEnoughBitsException(
-          name, _value, Unsigned.getSize(_value), _bits)
+          name, num, Unsigned.getSize(num), _bits)
       }
     }
 
@@ -186,16 +181,6 @@ package ScalaHDL.Core.DataType {
 
   class Bool(override var name: String, override var _value: Int)
       extends Unsigned(name, _value, 1) {
-    override def setNext(n: Int) {
-      next = n % 2
-    }
-
-    override def checkValid() {
-      if (_value > 1 || value < 0) {
-        throw new NotEnoughBitsException(
-          name, _value, Unsigned.getSize(_value), 1)
-      }
-    }
 
     override def opposite() =
       new Bool("", 1 - _value)
@@ -223,14 +208,10 @@ package ScalaHDL.Core.DataType {
   class Signed(override var name: String, override var _value: Int, _bits: Int)
       extends Unsigned(name, _value, _bits) {
 
-    override def setNext(n: Int) {
-      next = n % math.pow(2, _bits - 1).toInt
-    }
-
-    override def checkValid() {
-      if (Signed.getSize(_value) > _bits)
+    override def checkValid(num: Int) {
+      if (Signed.getSize(num) > _bits)
         throw new NotEnoughBitsException(
-          name, _value, Signed.getSize(_value), _bits)
+          name, num, Signed.getSize(num), _bits)
     }
 
     def this(name: String, _value: Int) {
