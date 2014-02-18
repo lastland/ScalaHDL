@@ -183,19 +183,19 @@ class SignedTest extends Suite {
 
   def testAdd() {
     assert(new Signed("", 0, 1) + new Signed("", 1, 2) ===
-      new Signed("", 1, 2))
+      new Unsigned("", 1, 1))
     assert(new Signed("", 15, 5) + new Signed("", 15, 5) ===
-      new Signed("", 30, 6))
+      new Unsigned("", 30, 5))
     assert(new Signed("", 1, 2) + new Signed("", 15, 5) ===
-      new Signed("", 16, 6))
+      new Unsigned("", 16, 5))
     assert(new Signed("", 0, 1) + new Signed("", -1, 1) ===
       new Signed("", -1, 1))
     assert(new Signed("", 3, 3) + new Signed("", -15, 5) ===
       new Signed("", -12, 5))
     assert(new Signed("", 15, 5) + new Signed("", -15, 5) ===
-      new Signed("", 0, 1))
+      new Unsigned("", 0, 1))
     assert(new Signed("", 15, 5) + new Signed("", -1, 1) ===
-      new Signed("", 14, 5))
+      new Unsigned("", 14, 4))
   }
 
   def testMinus() {
@@ -206,22 +206,22 @@ class SignedTest extends Suite {
     assert(new Signed("", 1, 2) - new Signed("", 15, 5) ===
       new Signed("", -14, 5))
     assert(new Signed("", 0, 1) - new Signed("", -1, 1) ===
-      new Signed("", 1, 2))
+      new Unsigned("", 1, 1))
     assert(new Signed("", 3, 3) - new Signed("", -15, 5) ===
-      new Signed("", 18, 6))
+      new Unsigned("", 18, 5))
     assert(new Signed("", 15, 5) - new Signed("", -15, 5) ===
-      new Signed("", 30, 6))
+      new Unsigned("", 30, 5))
     assert(new Signed("", 15, 5) - new Signed("", -1, 1) ===
-      new Signed("", 16, 6))
+      new Unsigned("", 16, 5))
   }
 
   def testTimes() {
     assert(new Signed("", 1, 2) * new Signed("", 1, 2) ===
-      new Signed("", 1, 2))
+      new Unsigned("", 1, 1))
     assert(new Signed("", 15, 5) * new Signed("", 15, 5) ===
-      new Signed("", 225, 9))
+      new Unsigned("", 225, 8))
     assert(new Signed("", 1, 2) * new Signed("", 15, 5) ===
-      new Signed("", 15, 5))
+      new Unsigned("", 15, 4))
     assert(new Signed("", 1, 2) * new Signed("", -1, 1) ===
       new Signed("", -1, 1))
     assert(new Signed("", 3, 3) * new Signed("", -15, 5) ===

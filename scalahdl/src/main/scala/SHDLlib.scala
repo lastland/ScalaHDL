@@ -275,6 +275,10 @@ package Core {
         case HDLFunc2(_, _, a, b) =>
           ret ++= findSenslist(a)
           ret ++= findSenslist(b)
+        case HDLIndex(_, ob, _) =>
+          ret ++= findSenslist(ob)
+        case HDLSlice(_, ob, _, _) =>
+          ret ++= findSenslist(ob)
         case sig: HDLSignal =>
           null
         case _ =>
@@ -316,7 +320,7 @@ package Core {
       extends HDLObject(hdl) {
 
     override def convert(): String =
-      List(ob.convert(), "[", hi - 1, ", ", lo, "]").mkString("")
+      List(ob.convert(), "[", hi - 1, ":", lo, "]").mkString("")
 
     override def exec(sigMap: HashMap[Symbol, Signal]) =
       new Unsigned("", (ob.exec(sigMap).value >> lo) &

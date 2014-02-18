@@ -221,12 +221,17 @@ package ScalaHDL.Core.DataType {
     override def opposite() =
       new Signed("", -value, _bits)
 
+    override def /(other: Signal) =
+      if (_value < 0)
+        new Signed("", _value / other.value - 1)
+      else
+        new Signed("", _value / other.value)
+
     override def %(other: Signal) =
-      if (_value < 0) {
+      if (_value < 0)
         new Signed("", _value - (_value / other.value - 1) * other.value)
-      } else {
+      else
         new Signed("", _value % other.value)
-      }
 
     override def toString(): String =
       "Signed %s(value = %d, bits = %d)".format(name, _value, _bits)
