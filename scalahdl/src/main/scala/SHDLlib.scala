@@ -43,7 +43,7 @@ package Core {
     val add, sub, mul, div, mod,
       bitwise_and, bitwise_or, bitwise_xor,
       logic_and, logic_or,
-      shl, shr = Value
+      shl, shr, concat = Value
   }
   import HDLOperation._
 
@@ -72,6 +72,9 @@ package Core {
 
     def apply(idx: Int): HDLObject =
       HDLIndex(hdl, this, idx)
+
+    def apply(hi: Int, lo: Int): HDLObject =
+      HDLSlice(hdl, this, hi, lo)
 
     def <(other: HDLObject): HDLJudgement =
       HDLJudgement(hdl, lt, this, other)
@@ -124,6 +127,9 @@ package Core {
     def >>(other: HDLObject): HDLFunc2 =
       HDLFunc2(hdl, shr, this, other)
 
+    def ~~(other: HDLObject): HDLFunc2 =
+      HDLFunc2(hdl, concat, this, other)
+
     def unary_!(): HDLFunc1 =
       HDLFunc1(hdl, logic_not, this)
 
@@ -136,14 +142,11 @@ package Core {
   case class HDLFunc1 (hdl: ScalaHDL,
     op: HDLPrefixOperator, a: HDLObject) extends HDLFunc(hdl) {
     override def convert(): String = {
-      val s = a match {
-        case id: HDLIdent => a.convert()
-        case _ => "(" + a.convert() + ")"
+      val s = op match {
+        case `logic_not` => "!" + a.convert()
+        case `negation` =>  "~" + a.convert()
       }
-      op match {
-      case `logic_not` => "!" + s
-      case `negation` =>  "~" + s
-    }
+      "("+ s + ")"
     }
     override def exec(sigMap: HashMap[Symbol, Signal]): Signal = op match {
       case `negation` => val b = a.exec(sigMap)
@@ -156,19 +159,27 @@ package Core {
 
   case class HDLFunc2 (hdl: ScalaHDL,
     op: HDLOperation, a: HDLObject, b: HDLObject) extends HDLFunc(hdl) {
-    override def convert(): String = op match {
-      case `add` => a.convert() + " + " + b.convert()
-      case `sub` => a.convert() + " - " + b.convert()
-      case `mul` => a.convert() + " * " + b.convert()
-      case `div` => a.convert() + " / " + b.convert()
-      case `mod` => a.convert() + " % " + b.convert()
-      case `bitwise_and` => a.convert() + " & " + b.convert()
-      case `bitwise_or`  => a.convert() + " | " + b.convert()
-      case `bitwise_xor` => a.convert() + " ^ " + b.convert()
-      case `logic_and` => a.convert() + " && " + b.convert()
-      case `logic_or` => a.convert() + " || " + b.convert()
-      case `shl` => a.convert() + " << " + b.convert()
-      case `shr` => a.convert() + " >> " + b.convert()
+    override def convert(): String = {
+      val st = op match {
+        case `add` => a.convert() + " + " + b.convert()
+        case `sub` => a.convert() + " - " + b.convert()
+        case `mul` => a.convert() + " * " + b.convert()
+        case `div` => a.convert() + " / " + b.convert()
+        case `mod` => a.convert() + " % " + b.convert()
+        case `bitwise_and` => a.convert() + " & " + b.convert()
+        case `bitwise_or`  => a.convert() + " | " + b.convert()
+        case `bitwise_xor` => a.convert() + " ^ " + b.convert()
+        case `logic_and` => a.convert() + " && " + b.convert()
+        case `logic_or` => a.convert() + " || " + b.convert()
+        case `shl` => a.convert() + " << " + b.convert()
+        case `shr` => a.convert() + " >> " + b.convert()
+        case `concat` => "{" + findConcatMember().map(
+          (x: HDLObject) => x.convert()).mkString(", ") + "}"
+      }
+      op match {
+        case `concat` => st
+        case _ => "(" + st + ")"
+      }
     }
 
     override def exec(sigMap: HashMap[Symbol, Signal]): Signal = {
@@ -188,6 +199,27 @@ package Core {
         case `shl` => sa << sb
         case `shr` => sa >> sb
       }
+    }
+
+    private def findConcatMember(): List[HDLObject] = {
+      var lst = List[HDLObject]()
+      if (op == concat) {
+        a match {
+          case func: HDLFunc2 =>
+            lst ++= func.findConcatMember()
+          case id: HDLIdent =>
+            lst :+= id
+          case _ => null
+        }
+        b match {
+          case func: HDLFunc2 =>
+            lst ++= func.findConcatMember()
+          case id: HDLIdent =>
+            lst :+= id
+          case _ => null
+        }
+      }
+      lst
     }
   }
 
@@ -227,7 +259,7 @@ package Core {
             tpe = reg
         }
         hdl.currentBlock.top.argsMap(id.name) =
-          ArgInfo(v.name, tpe, dir, v.size)
+          ArgInfo(v.name, tpe, dir, v.signed, v.size)
       }
       hdl.currentBlock.top.senslist ++= findSenslist(ob)
       a
@@ -264,20 +296,37 @@ package Core {
 
   case class HDLIdent(hdl: ScalaHDL, name: Symbol)
       extends HDLObject(hdl) {
+
     override def convert(): String = name.name
+
     override def exec(sigMap: HashMap[Symbol, Signal]) = sigMap(name)
   }
 
   case class HDLIndex(hdl: ScalaHDL, ob: HDLObject, idx: Int)
       extends HDLObject(hdl) {
+
     override def convert(): String =
       ob.convert() + "[" + idx + "]"
+
     override def exec(sigMap: HashMap[Symbol, Signal]) =
       new Bool("", (ob.exec(sigMap).value >> idx) % 2)
   }
 
+  case class HDLSlice(hdl: ScalaHDL, ob: HDLObject, hi: Int, lo: Int)
+      extends HDLObject(hdl) {
+
+    override def convert(): String =
+      List(ob.convert(), "[", hi - 1, ", ", lo, "]").mkString("")
+
+    override def exec(sigMap: HashMap[Symbol, Signal]) =
+      new Unsigned("", (ob.exec(sigMap).value >> lo) &
+        (math.pow(2, hi - lo).toInt - 1))
+  }
+
   case class HDLSignal(hdl: ScalaHDL, sig: () => Signal) extends HDLObject(hdl) {
+
     override def convert(): String = sig().value.toString
+
     override def exec(sigMap: HashMap[Symbol, Signal]) = sig()
   }
 
@@ -356,7 +405,7 @@ package Core {
           "always @(" +
           (if (e == posedge) "posedge"  else "negedge") +
           " clk) begin: _" +
-            name + "\n" +
+          name + "\n" +
             (for (stmt <- content) yield stmt.convert()).mkString("") + "end\n"
         case _async(hdl) =>
           if (simpleComb) {
@@ -440,10 +489,10 @@ package Core {
 
     override def convert(): String =
       (if (parent != null) "else " else "") +
-      (if (judge != null) "if (" + judge.convert() + ") " else "") +
-      "begin\n" +
-      content.map(_.convert()).mkString("") + "end\n" +
-      (if (child != null) child.convert() else "")
+    (if (judge != null) "if (" + judge.convert() + ") " else "") +
+    "begin\n" +
+    content.map(_.convert()).mkString("") + "end\n" +
+    (if (child != null) child.convert() else "")
 
     override def exec(sigMap: HashMap[Symbol, Signal]): Signal = {
       if (judge == null || judge.exec(sigMap).value > 0) {
@@ -499,7 +548,11 @@ package Core {
       for (param <- params) {
         m(param) match {
           case s: Signal =>
-            argsMap += (param -> ArgInfo(param.name, wire, input, s.size))
+            val signed = s match {
+              case s: Signed => true
+              case _ => false
+            }
+            argsMap += (param -> ArgInfo(param.name, wire, input, signed, s.size))
           case _ => throw new IllegalArgumentException(
             "argument must be subclass of Signal")
         }
@@ -524,7 +577,6 @@ package Core {
       convert()
     }
 
-    // TODO: implement
     override def exec(sigMap: HashMap[Symbol, Signal]): Signal = null
   }
 
@@ -599,7 +651,11 @@ package Core {
     def toHDLType(sig: Signal): HDLType = {
       val name = unusedName(currentBlock.top.argsMap.keySet)
       sig.name = name.name
-      val info = ArgInfo(name.name, wire, middle, sig.size)
+      val signed = sig match {
+        case s: Signed => false
+        case _ => true
+      }
+      val info = ArgInfo(name.name, wire, middle, signed, sig.size)
       hdl.currentBlock.top.argsMap += (name -> info)
       hdl.currentBlock.top.sigMap += (name -> sig)
       new HDLType(HDLIdent(this, name), info)
