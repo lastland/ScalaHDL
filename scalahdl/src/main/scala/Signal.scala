@@ -31,10 +31,10 @@ package ScalaHDL.Core.DataType {
   private object Signed {
     def getSize(value: Int): Int = {
       val s = value.toBinaryString
-      if (value < 0)
+      if (value == -1)
+        2
+      else if (value < 0)
         ("1" + s.dropWhile(_ == '1')).size
-      else if (value == 0)
-        1
       else
         s.size + 1
     }
@@ -78,8 +78,6 @@ package ScalaHDL.Core.DataType {
     }
 
     def checkValid(num: Int): Unit
-
-    def opposite(): Signal
 
     def &(other: Signal): Signal
     def |(other: Signal): Signal
@@ -139,11 +137,8 @@ package ScalaHDL.Core.DataType {
       }
     }
 
-    override def opposite() =
-      new Unsigned("", (1 << _bits) - 1 - _value, _bits)
-
     override def unary_~(): Signal =
-      throw new RuntimeException("Not supported yet!")
+      new Unsigned("", (~value & (1 << _bits) - 1), _bits)
 
     override def +(other: Signal) =
       Signal.mkSignal(value + other.value)
@@ -182,9 +177,6 @@ package ScalaHDL.Core.DataType {
   class Bool(override var name: String, override var _value: Int)
       extends Unsigned(name, _value, 1) {
 
-    override def opposite() =
-      new Bool("", 1 - _value)
-
     override def unary_~() =
       new Bool("", 1 - _value)
 
@@ -218,20 +210,20 @@ package ScalaHDL.Core.DataType {
       this(name, _value, Signed.getSize(_value))
     }
 
-    override def opposite() =
-      new Signed("", -value, _bits)
+    override def unary_~(): Signal =
+      new Signed("", ~value, _bits)
 
     override def /(other: Signal) =
       if (_value < 0)
-        new Signed("", _value / other.value - 1)
+        Signal.mkSignal(_value / other.value - 1)
       else
-        new Signed("", _value / other.value)
+        Signal.mkSignal(_value / other.value)
 
     override def %(other: Signal) =
-      if (_value < 0)
-        new Signed("", _value - (_value / other.value - 1) * other.value)
+      if (_value < 0 && _value % other.value != 0)
+        Signal.mkSignal(_value - (_value / other.value - 1) * other.value)
       else
-        new Signed("", _value % other.value)
+        Signal.mkSignal(_value % other.value)
 
     override def toString(): String =
       "Signed %s(value = %d, bits = %d)".format(name, _value, _bits)
