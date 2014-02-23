@@ -127,7 +127,7 @@ package Core {
     def >>(other: HDLObject): HDLFunc2 =
       HDLFunc2(hdl, shr, this, other)
 
-    def ~~(other: HDLObject): HDLFunc2 =
+    def ++(other: HDLObject): HDLFunc2 =
       HDLFunc2(hdl, concat, this, other)
 
     def unary_!(): HDLFunc1 =
