@@ -1,0 +1,31 @@
+package ScalaHDLExample.Bin2Gray
+
+import ScalaHDL.Core.ScalaHDL
+import ScalaHDL.Core.HDLType
+import ScalaHDL.Core.DataType._
+import ScalaHDL.Core.DataType.Signals._
+import ScalaHDL.Simulation.Simulator
+
+trait Bin2gray extends ScalaHDL {
+
+  val width = 5
+
+  defMod.bin2gray('g, 'b) {
+    async {
+      for (i <- 0 until width)
+        'g(i) := 'b(i + 1) ^ 'b(i)
+      'g(width) := 'b(width)
+    }
+  }
+}
+
+object Main extends Bin2gray {
+  def main(args: Array[String]) {
+    val clk = bool(0)
+    val rst = bool(0)
+    val g = unsigned(0, width + 1)
+    val b = unsigned(0, width + 1)
+
+    println(convert('bin2gray, g, b))
+  }
+}

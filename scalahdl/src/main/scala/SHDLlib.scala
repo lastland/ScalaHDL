@@ -70,11 +70,13 @@ package Core {
       new Bool("", 0)
     }
 
-    def apply(idx: Int): HDLObject =
+    def apply(idx: Int): HDLIndex =
       HDLIndex(hdl, this, idx)
 
-    def apply(hi: Int, lo: Int): HDLObject =
+    def apply(hi: Int, lo: Int): HDLSlice =
       HDLSlice(hdl, this, hi, lo)
+
+    def findIds(): HashSet[Symbol]
 
     def <(other: HDLObject): HDLJudgement =
       HDLJudgement(hdl, lt, this, other)
@@ -141,6 +143,11 @@ package Core {
 
   case class HDLFunc1 (hdl: ScalaHDL,
     op: HDLPrefixOperator, a: HDLObject) extends HDLFunc(hdl) {
+
+    override def findIds(): HashSet[Symbol] = {
+      a.findIds()
+    }
+
     override def convert(): String = {
       val s = op match {
         case `logic_not` => "!" + a.convert()
@@ -159,6 +166,14 @@ package Core {
 
   case class HDLFunc2 (hdl: ScalaHDL,
     op: HDLOperation, a: HDLObject, b: HDLObject) extends HDLFunc(hdl) {
+
+    override def findIds(): HashSet[Symbol] = {
+      val ret = new HashSet[Symbol]
+      ret ++= a.findIds()
+      ret ++= b.findIds()
+      ret
+    }
+
     override def convert(): String = {
       val st = op match {
         case `add` => a.convert() + " + " + b.convert()
@@ -224,9 +239,12 @@ package Core {
   }
 
   case class HDLAssignment(hdl: ScalaHDL,
-    left: HDLIdent, right: HDLObject) extends HDLObject(hdl) {
+    left: HDLValueHolder, right: HDLObject) extends HDLObject(hdl) {
+
+    override def findIds(): HashSet[Symbol] = new HashSet[Symbol]
+
     override def convert(): String =
-      if (hdl.currentBlock.top.argsMap(left.name).tpe == wire)
+      if (hdl.currentBlock.top.argsMap(left.findId).tpe == wire)
         "assign " + left.convert() + " = " + right.convert() + ";\n"
       else
         left.convert() + " <= " + right.convert() + ";\n"
@@ -240,11 +258,12 @@ package Core {
   }
 
   object HDLAssignment {
-    def createAssignment(hdl: ScalaHDL, id: HDLIdent, ob: HDLObject) = {
-      val a = HDLAssignment(hdl, id, ob)
+    def createAssignment(hdl: ScalaHDL, holder: HDLValueHolder, ob: HDLObject) = {
+      val a = HDLAssignment(hdl, holder, ob)
       hdl.currentBlock.top.addStmt(a)
-      if (hdl.currentBlock.top.argsMap.contains(id.name)) {
-        val v = hdl.currentBlock.top.argsMap(id.name)
+      val id = holder.findId()
+      if (hdl.currentBlock.top.argsMap.contains(id)) {
+        val v = hdl.currentBlock.top.argsMap(id)
         var dir = v.dir
         var tpe = v.tpe
         if (v.dir != middle) {
@@ -258,7 +277,7 @@ package Core {
           case b =>
             tpe = reg
         }
-        hdl.currentBlock.top.argsMap(id.name) =
+        hdl.currentBlock.top.argsMap(id) =
           ArgInfo(v.name, tpe, dir, v.signed, v.size)
       }
       hdl.currentBlock.top.senslist ++= findSenslist(ob)
@@ -292,14 +311,31 @@ package Core {
     private val hdl: ScalaHDL = idt.hdl
 
     def :=(other: HDLObject): HDLAssignment =
-      HDLAssignment.createAssignment(hdl, idt, other)
+      idt := other
 
     override def toString =
       "HDLType(" + idt.toString + "," + info.toString + ")"
   }
 
+  abstract class HDLValueHolder(hdl:ScalaHDL) extends HDLObject(hdl) {
+    def :=(other: HDLObject): HDLAssignment =
+      HDLAssignment.createAssignment(hdl, this, other)
+
+    def findId(): Symbol = {
+      val ids = findIds()
+      if (ids.size == 1) ids.head
+      else throw new RuntimeException("Syntax Error!")
+    }
+  }
+
   case class HDLIdent(hdl: ScalaHDL, name: Symbol)
-      extends HDLObject(hdl) {
+      extends HDLValueHolder(hdl) {
+
+    override def findIds(): HashSet[Symbol] = {
+      val ret = new HashSet[Symbol]
+      ret += name
+      ret
+    }
 
     override def convert(): String = name.name
 
@@ -307,7 +343,10 @@ package Core {
   }
 
   case class HDLIndex(hdl: ScalaHDL, ob: HDLObject, idx: Int)
-      extends HDLObject(hdl) {
+      extends HDLValueHolder(hdl) {
+
+    override def findIds(): HashSet[Symbol] =
+      ob.findIds()
 
     override def convert(): String =
       ob.convert() + "[" + idx + "]"
@@ -319,6 +358,9 @@ package Core {
   case class HDLSlice(hdl: ScalaHDL, ob: HDLObject, hi: Int, lo: Int)
       extends HDLObject(hdl) {
 
+    override def findIds(): HashSet[Symbol] =
+      ob.findIds()
+
     override def convert(): String =
       List(ob.convert(), "[", hi - 1, ":", lo, "]").mkString("")
 
@@ -328,6 +370,8 @@ package Core {
   }
 
   case class HDLSignal(hdl: ScalaHDL, sig: () => Signal) extends HDLObject(hdl) {
+
+    override def findIds(): HashSet[Symbol] = new HashSet[Symbol]
 
     override def convert(): String = sig().value.toString
 
@@ -341,6 +385,8 @@ package Core {
     val sigMap = new HashMap[Symbol, Signal]
     val argsMap = new HashMap[Symbol, ArgInfo]
     val senslist = new HashSet[Symbol]
+
+    override def findIds(): HashSet[Symbol] = new HashSet[Symbol]
 
     def content = {
       if (_content.isEmpty) extract()
@@ -443,6 +489,8 @@ package Core {
 
   case class HDLJudgement(hdl: ScalaHDL, op: HDLLogicOperator,
     a: HDLObject, b: HDLObject) extends HDLObject(hdl) {
+
+    override def findIds(): HashSet[Symbol] = new HashSet[Symbol]
 
     override def convert(): String = op match {
       case `lt` => a.convert() + " < " + b.convert()
