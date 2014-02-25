@@ -53,6 +53,14 @@ package Core {
   }
   import HDLLogicOperator._
 
+  object Language extends Enumeration {
+    type Language = Value
+    val verilog, vhdl = Value
+  }
+  import Language._
+
+  case class ConvertArg(lang: Language, signed: Boolean = false)
+
   /*
    * HDL Objects.
    */
@@ -65,7 +73,13 @@ package Core {
   }
 
   abstract sealed class HDLObject(hdl: ScalaHDL) {
-    def convert(): String
+
+    protected var _signed = false;
+
+    def signed = _signed
+
+    def convert(arg: ConvertArg): String
+
     def exec(sigMap: HashMap[Symbol, Signal]): Signal = {
       new Bool("", 0)
     }
@@ -148,10 +162,10 @@ package Core {
       a.findIds()
     }
 
-    override def convert(): String = {
+    override def convert(arg: ConvertArg): String = {
       val s = op match {
-        case `logic_not` => "!" + a.convert()
-        case `negation` =>  "~" + a.convert()
+        case `logic_not` => "!" + a.convert(arg)
+        case `negation` =>  "~" + a.convert(arg)
       }
       "("+ s + ")"
     }
@@ -167,6 +181,8 @@ package Core {
   case class HDLFunc2 (hdl: ScalaHDL,
     op: HDLOperation, a: HDLObject, b: HDLObject) extends HDLFunc(hdl) {
 
+    _signed = a.signed || b.signed
+
     override def findIds(): HashSet[Symbol] = {
       val ret = new HashSet[Symbol]
       ret ++= a.findIds()
@@ -174,22 +190,27 @@ package Core {
       ret
     }
 
-    override def convert(): String = {
+    override def convert(arg: ConvertArg): String = {
+      val arg2 =
+        if (_signed) ConvertArg(arg.lang, true)
+        else ConvertArg(arg.lang, arg.signed)
+      val sa = a.convert(arg2)
+      val sb = b.convert(arg2)
       val st = op match {
-        case `add` => a.convert() + " + " + b.convert()
-        case `sub` => a.convert() + " - " + b.convert()
-        case `mul` => a.convert() + " * " + b.convert()
-        case `div` => a.convert() + " / " + b.convert()
-        case `mod` => a.convert() + " % " + b.convert()
-        case `bitwise_and` => a.convert() + " & " + b.convert()
-        case `bitwise_or`  => a.convert() + " | " + b.convert()
-        case `bitwise_xor` => a.convert() + " ^ " + b.convert()
-        case `logic_and` => a.convert() + " && " + b.convert()
-        case `logic_or` => a.convert() + " || " + b.convert()
-        case `shl` => a.convert() + " << " + b.convert()
-        case `shr` => a.convert() + " >> " + b.convert()
+        case `add` => sa + " + " + sb
+        case `sub` => sa + " - " + sb
+        case `mul` => sa + " * " + sb
+        case `div` => sa + " / " + sb
+        case `mod` => sa + " % " + sb
+        case `bitwise_and` => sa + " & " + sb
+        case `bitwise_or`  => sa + " | " + sb
+        case `bitwise_xor` => sa + " ^ " + sb
+        case `logic_and` => sa + " && " + sb
+        case `logic_or` => sa + " || " + sb
+        case `shl` => sa + " << " + sb
+        case `shr` => sa + " >> " + sb
         case `concat` => "{" + findConcatMember().map(
-          (x: HDLObject) => x.convert()).mkString(", ") + "}"
+          (x: HDLObject) => x.convert(arg)).mkString(", ") + "}"
       }
       op match {
         case `concat` => st
@@ -243,11 +264,12 @@ package Core {
 
     override def findIds(): HashSet[Symbol] = new HashSet[Symbol]
 
-    override def convert(): String =
+    override def convert(arg: ConvertArg): String = {
       if (hdl.currentBlock.top.argsMap(left.findId).tpe == wire)
-        "assign " + left.convert() + " = " + right.convert() + ";\n"
+        "assign " + left.convert(arg) + " = " + right.convert(arg) + ";\n"
       else
-        left.convert() + " <= " + right.convert() + ";\n"
+        left.convert(arg) + " <= " + right.convert(arg) + ";\n"
+    }
 
     override def exec(sigMap: HashMap[Symbol, Signal]): Signal = {
       val sig = left.exec(sigMap)
@@ -331,13 +353,19 @@ package Core {
   case class HDLIdent(hdl: ScalaHDL, name: Symbol)
       extends HDLValueHolder(hdl) {
 
+    _signed = hdl.currentBlock.top.argsMap(name).signed
+
     override def findIds(): HashSet[Symbol] = {
       val ret = new HashSet[Symbol]
       ret += name
       ret
     }
 
-    override def convert(): String = name.name
+    override def convert(arg: ConvertArg): String =
+      if (arg.signed && !hdl.currentBlock.top.argsMap(name).signed)
+        "$signed({1'b0, " + name.name + "})"
+      else
+        name.name
 
     override def exec(sigMap: HashMap[Symbol, Signal]) = sigMap(name)
   }
@@ -348,8 +376,8 @@ package Core {
     override def findIds(): HashSet[Symbol] =
       ob.findIds()
 
-    override def convert(): String =
-      ob.convert() + "[" + idx + "]"
+    override def convert(arg: ConvertArg): String =
+      ob.convert(arg) + "[" + idx + "]"
 
     override def exec(sigMap: HashMap[Symbol, Signal]) =
       new SignalBit(ob.exec(sigMap), idx)
@@ -361,8 +389,8 @@ package Core {
     override def findIds(): HashSet[Symbol] =
       ob.findIds()
 
-    override def convert(): String =
-      List(ob.convert(), "[", hi - 1, ":", lo, "]").mkString("")
+    override def convert(arg: ConvertArg): String =
+      List(ob.convert(arg), "[", hi - 1, ":", lo, "]").mkString("")
 
     override def exec(sigMap: HashMap[Symbol, Signal]) =
       new Unsigned("", (ob.exec(sigMap).value >> lo) &
@@ -373,7 +401,7 @@ package Core {
 
     override def findIds(): HashSet[Symbol] = new HashSet[Symbol]
 
-    override def convert(): String = sig().value.toString
+    override def convert(arg: ConvertArg): String = sig().value.toString
 
     override def exec(sigMap: HashMap[Symbol, Signal]) = sig()
   }
@@ -449,21 +477,21 @@ package Core {
       }
     }
 
-    override def convert(): String =
+    override def convert(arg: ConvertArg): String =
       (cond match {
         case _sync(hdl, e) =>
           "always @(" +
           (if (e == posedge) "posedge"  else "negedge") +
           " clk) begin: _" +
           name + "\n" +
-            (for (stmt <- content) yield stmt.convert()).mkString("") + "end\n"
+            (for (stmt <- content) yield stmt.convert(arg)).mkString("") + "end\n"
         case _async(hdl) =>
           if (simpleComb) {
-            (for (stmt <- content) yield stmt.convert()).mkString("")
+            (for (stmt <- content) yield stmt.convert(arg)).mkString("")
           }
           else {
             "always @(" + senslist.map(_.name).mkString(", ") + ") begin\n" +
-              (for (stmt <- content) yield stmt.convert()).mkString("") + "end\n"
+              (for (stmt <- content) yield stmt.convert(arg)).mkString("") + "end\n"
           }
       }) + "\n"
 
@@ -492,12 +520,12 @@ package Core {
 
     override def findIds(): HashSet[Symbol] = new HashSet[Symbol]
 
-    override def convert(): String = op match {
-      case `lt` => a.convert() + " < " + b.convert()
-      case `let` => a.convert() + " <= " + b.convert()
-      case `eqt` => a.convert() + " == " + b.convert()
-      case `gt` => a.convert() + " > " + b.convert()
-      case `get` => a.convert() + " >= " + b.convert()
+    override def convert(arg: ConvertArg): String = op match {
+      case `lt` => a.convert(arg) + " < " + b.convert(arg)
+      case `let` => a.convert(arg) + " <= " + b.convert(arg)
+      case `eqt` => a.convert(arg) + " == " + b.convert(arg)
+      case `gt` => a.convert(arg) + " > " + b.convert(arg)
+      case `get` => a.convert(arg) + " >= " + b.convert(arg)
     }
 
     override def exec(sigMap: HashMap[Symbol, Signal]): Signal = {
@@ -539,12 +567,12 @@ package Core {
       this(hdl, null, judge, func)
     }
 
-    override def convert(): String =
+    override def convert(arg: ConvertArg): String =
       (if (parent != null) "else " else "") +
-    (if (judge != null) "if (" + judge.convert() + ") " else "") +
+    (if (judge != null) "if (" + judge.convert(arg) + ") " else "") +
     "begin\n" +
-    content.map(_.convert()).mkString("") + "end\n" +
-    (if (child != null) child.convert() else "")
+    content.map(_.convert(arg)).mkString("") + "end\n" +
+    (if (child != null) child.convert(arg) else "")
 
     override def exec(sigMap: HashMap[Symbol, Signal]): Signal = {
       if (judge == null || judge.exec(sigMap).value > 0) {
@@ -612,13 +640,13 @@ package Core {
       m
     }
 
-    override def convert(): String = {
+    override def convert(arg: ConvertArg): String = {
       if (_content.isEmpty) extract()
       hdl.currentBlock.push(this)
       val s = "module %s (\n".format(name) + params.map(_.name).mkString(",\n") +
       "\n);\n\n" +
         (for (arg <- argsMap) yield arg._2.declaration).toList.sorted.mkString("") + "\n" +
-        (for (stmt <- content) yield stmt.convert()).mkString("") +
+        (for (stmt <- content) yield stmt.convert(arg)).mkString("") +
       "\nendmodule\n"
       hdl.currentBlock.pop()
       s
@@ -626,7 +654,7 @@ package Core {
 
     def convert(args: Seq[Any]): String = {
       mapArgs(args)
-      convert()
+      convert(ConvertArg(verilog))
     }
 
     override def exec(sigMap: HashMap[Symbol, Signal]): Signal = null
