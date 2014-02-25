@@ -229,6 +229,21 @@ package ScalaHDL.Core.DataType {
       "Signed %s(value = %d, bits = %d)".format(name, _value, _bits)
   }
 
+  class SignalBit(val sig: Signal, idx: Int)
+      extends Bool("", (sig.value >> idx) % 2) {
+
+    override def update(): List[Waiter] = {
+      if (_value != next) {
+        _value = next
+        sig.setNext(sig.value ^ (1 << idx))
+      }
+      sig.update()
+    }
+
+    override def toString(): String =
+      "SignalBit " + idx + " of " + sig.toString
+  }
+
   object Signals {
     def unsigned(value: Int): Unsigned =
       macro makeUnsignedWithName1

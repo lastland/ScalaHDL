@@ -6,7 +6,7 @@ import ScalaHDL.Core.DataType._
 import ScalaHDL.Core.DataType.Signals._
 import ScalaHDL.Simulation.Simulator
 
-trait Bin2gray extends ScalaHDL {
+trait Bin2Gray extends ScalaHDL {
 
   val width = 5
 
@@ -19,7 +19,7 @@ trait Bin2gray extends ScalaHDL {
   }
 }
 
-object Main extends Bin2gray {
+object Main extends Bin2Gray {
   def main(args: Array[String]) {
     val clk = bool(0)
     val rst = bool(0)

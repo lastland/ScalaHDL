@@ -352,7 +352,7 @@ package Core {
       ob.convert() + "[" + idx + "]"
 
     override def exec(sigMap: HashMap[Symbol, Signal]) =
-      new Bool("", (ob.exec(sigMap).value >> idx) % 2)
+      new SignalBit(ob.exec(sigMap), idx)
   }
 
   case class HDLSlice(hdl: ScalaHDL, ob: HDLObject, hi: Int, lo: Int)

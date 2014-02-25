@@ -157,10 +157,18 @@ class Simulator(hdl: ScalaHDL, mods: Seq[module]){
     if (maxTime == 0) return waiters
     while (true) {
       for (sig <- hdl.siglist) {
-        val old = sig.value
-        waiters = sig.update() ::: waiters
-        if (sig.value != old)
-          trace.logNew(sig)
+        sig match {
+          case bit: SignalBit =>
+            val old = bit.sig.value
+            waiters = bit.update() ::: waiters
+            if (bit.sig.value != old)
+              trace.logNew(bit.sig)
+          case _ =>
+            val old = sig.value
+            waiters = sig.update() ::: waiters
+            if (sig.value != old)
+              trace.logNew(sig)
+        }
       }
       waiters = waiters.distinct
       hdl.siglist.clear()
