@@ -59,7 +59,7 @@ package Core {
   }
   import Language._
 
-  case class ConvertArg(lang: Language, signed: Boolean = false)
+  case class ConvertArg(lang: Language, indents: Int = 0, signed: Boolean = false)
 
   /*
    * HDL Objects.
@@ -70,6 +70,9 @@ package Core {
       case x: HDLObject => true
       case _ => false
     }
+
+    def mkIndents(indent: Int): String =
+      (for (i <- 1 to indent) yield "  ").mkString("")
   }
 
   abstract sealed class HDLObject(hdl: ScalaHDL) {
@@ -192,8 +195,8 @@ package Core {
 
     override def convert(arg: ConvertArg): String = {
       val arg2 =
-        if (_signed) ConvertArg(arg.lang, true)
-        else ConvertArg(arg.lang, arg.signed)
+        if (_signed) ConvertArg(arg.lang, arg.indents, true)
+        else ConvertArg(arg.lang, arg.indents, arg.signed)
       val sa = a.convert(arg2)
       val sb = b.convert(arg2)
       val st = op match {
@@ -266,9 +269,11 @@ package Core {
 
     override def convert(arg: ConvertArg): String = {
       if (hdl.currentBlock.top.argsMap(left.findId).tpe == wire)
-        "assign " + left.convert(arg) + " = " + right.convert(arg) + ";\n"
+        HDLObject.mkIndents(arg.indents) +
+          "assign " + left.convert(arg) + " = " + right.convert(arg) + ";\n"
       else
-        left.convert(arg) + " <= " + right.convert(arg) + ";\n"
+        HDLObject.mkIndents(arg.indents) +
+          left.convert(arg) + " <= " + right.convert(arg) + ";\n"
     }
 
     override def exec(sigMap: HashMap[Symbol, Signal]): Signal = {
@@ -477,23 +482,30 @@ package Core {
       }
     }
 
-    override def convert(arg: ConvertArg): String =
+    override def convert(arg: ConvertArg): String = {
+      val new_arg = ConvertArg(arg.lang, arg.indents + 1, arg.signed)
       (cond match {
         case _sync(hdl, e) =>
           "always @(" +
           (if (e == posedge) "posedge"  else "negedge") +
           " clk) begin: _" +
           name + "\n" +
-            (for (stmt <- content) yield stmt.convert(arg)).mkString("") + "end\n"
+          (for (stmt <- content) yield
+            stmt.convert(new_arg)).mkString("") +
+          "end\n"
         case _async(hdl) =>
           if (simpleComb) {
-            (for (stmt <- content) yield stmt.convert(arg)).mkString("")
+            (for (stmt <- content) yield
+              stmt.convert(arg)).mkString("")
           }
           else {
             "always @(" + senslist.map(_.name).mkString(", ") + ") begin\n" +
-              (for (stmt <- content) yield stmt.convert(arg)).mkString("") + "end\n"
+              (for (stmt <- content) yield
+                stmt.convert(new_arg)).mkString("") +
+              "end\n"
           }
       }) + "\n"
+    }
 
     override def exec(sigMap: HashMap[Symbol, Signal]) = null
   }
@@ -567,12 +579,15 @@ package Core {
       this(hdl, null, judge, func)
     }
 
-    override def convert(arg: ConvertArg): String =
-      (if (parent != null) "else " else "") +
-    (if (judge != null) "if (" + judge.convert(arg) + ") " else "") +
-    "begin\n" +
-    content.map(_.convert(arg)).mkString("") + "end\n" +
-    (if (child != null) child.convert(arg) else "")
+    override def convert(arg: ConvertArg): String = {
+      val indents = HDLObject.mkIndents(arg.indents)
+      val new_arg = ConvertArg(arg.lang, arg.indents + 1, arg.signed)
+      indents + (if (parent != null) "else " else "") +
+      (if (judge != null) "if (" + judge.convert(arg) + ") " else "") +
+      "begin\n" +
+      content.map(_.convert(new_arg)).mkString("") + indents + "end\n" +
+      (if (child != null) child.convert(arg) else "")
+    }
 
     override def exec(sigMap: HashMap[Symbol, Signal]): Signal = {
       if (judge == null || judge.exec(sigMap).value > 0) {
