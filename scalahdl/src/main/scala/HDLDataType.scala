@@ -12,21 +12,22 @@ package ScalaHDL.Core.DataType {
   import SignalDirection._
 
   case class ArgInfo(name: String, tpe: SignalType, dir: SignalDirection,
-    signed: Boolean, size: Int) {
+    signed: Boolean, size: Int, lstSize: Int = 1) {
     def declaration: String = {
       val sign = if (signed) "signed " else ""
-      val bits = if (size > 1) "[%d:%d] ".format(size - 1, 0) else ""
+      val bits = if (size > 1) "[%d:0] ".format(size - 1) else ""
+      val arrLst = if (lstSize > 1) " [0:%d]".format(lstSize - 1) else ""
       dir match {
-        case `input` => "input " + sign + bits + name + ";\n"
-        case `output` => "output " + sign + bits + name + ";\n" +
+        case `input` => "input " + sign + bits + name + arrLst + ";\n"
+        case `output` => "output " + sign + bits + name + arrLst + ";\n" +
           (tpe match {
-            case `reg` => "reg " + sign + bits + name + ";\n"
-            case `wire` => "wire " + sign + bits + name + ";\n"
+            case `reg` => "reg " + sign + bits + name + arrLst + ";\n"
+            case `wire` => "wire " + sign + bits + name + arrLst + ";\n"
           })
         case `middle` =>
           (tpe match {
-            case `reg` => "reg " + sign + bits + name + ";\n"
-            case `wire` => "wire " + sign + bits + name + ";\n"
+            case `reg` => "reg " + sign + bits + name + arrLst + ";\n"
+            case `wire` => "wire " + sign + bits + name + arrLst + ";\n"
           })
       }
     }

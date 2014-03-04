@@ -265,15 +265,31 @@ package Core {
   case class HDLAssignment(hdl: ScalaHDL,
     left: HDLValueHolder, right: HDLObject) extends HDLObject(hdl) {
 
+    private def assignmentOfCase(
+      left: String, idx: Int, lst: HDLValueList): String = {
+      idx + ": " + left + " <= " + lst.lst(idx) + ";\n"
+    }
+
     override def findIds(): HashSet[Symbol] = new HashSet[Symbol]
 
     override def convert(arg: ConvertArg): String = {
-      if (hdl.currentBlock.top.argsMap(left.findId).tpe == wire)
-        HDLObject.mkIndents(arg.indents) +
-          "assign " + left.convert(arg) + " = " + right.convert(arg) + ";\n"
-      else
-        HDLObject.mkIndents(arg.indents) +
-          left.convert(arg) + " <= " + right.convert(arg) + ";\n"
+      right match {
+        case elem: HDLValueListElement =>
+          val new_arg = ConvertArg(arg.lang, arg.indents + 1, arg.signed)
+          HDLObject.mkIndents(arg.indents) +
+          "case (" + elem.idx.idt.convert(arg) + ")\n" +
+          (for (i <- 0 until elem.lst.size)
+          yield assignmentOfCase(left.convert(arg), i, elem.lst)).map(
+          HDLObject.mkIndents(arg.indents + 1) + _).mkString("") +
+          HDLObject.mkIndents(arg.indents) + "endcase\n"
+        case _ =>
+          if (hdl.currentBlock.top.argsMap(left.findId).tpe == wire)
+            HDLObject.mkIndents(arg.indents) +
+            "assign " + left.convert(arg) + " = " + right.convert(arg) + ";\n"
+          else
+            HDLObject.mkIndents(arg.indents) +
+            left.convert(arg) + " <= " + right.convert(arg) + ";\n"
+      }
     }
 
     override def exec(sigMap: HashMap[Symbol, Signal]): Signal = {
@@ -305,7 +321,7 @@ package Core {
             tpe = reg
         }
         hdl.currentBlock.top.argsMap(id) =
-          ArgInfo(v.name, tpe, dir, v.signed, v.size)
+          ArgInfo(v.name, tpe, dir, v.signed, v.size, v.lstSize)
       }
       hdl.currentBlock.top.senslist ++= findSenslist(ob)
       a
@@ -325,6 +341,10 @@ package Core {
           ret ++= findSenslist(ob)
         case HDLSlice(_, ob, _, _) =>
           ret ++= findSenslist(ob)
+        case ob: HDLListElement =>
+          null
+        case ob: HDLValueListElement =>
+          null
         case sig: HDLSignal =>
           null
         case _ =>
@@ -400,6 +420,69 @@ package Core {
     override def exec(sigMap: HashMap[Symbol, Signal]) =
       new Unsigned("", (ob.exec(sigMap).value >> lo) &
         (math.pow(2, hi - lo).toInt - 1))
+  }
+
+  class HDLList(hdl: ScalaHDL, val name: Symbol, lst: List[Signal])
+      extends HDLObject(hdl) {
+
+    def apply(idx: HDLType): HDLValueHolder =
+      new HDLListElement(hdl, this, idx)
+
+    override def convert(arg: ConvertArg): String = name.name
+
+    // TODO: implement (but do we really need it?)
+    override def exec(sigMap: HashMap[Symbol, Signal]) = null
+
+    // TODO: implement (but do we really need it?)
+    override def findIds(): HashSet[Symbol] = new HashSet[Symbol]
+  }
+
+  class HDLListElement(hdl: ScalaHDL, lst: HDLList, val idx: HDLType)
+      extends HDLValueHolder(hdl) {
+
+    override def convert(arg: ConvertArg): String = {
+      lst.convert(arg) + "[" + idx.idt.convert(arg) + "]"
+    }
+
+    override def exec(sigMap: HashMap[Symbol, Signal]) =
+      sigMap(Symbol(lst.name.name + "(" + idx.idt.exec(sigMap).value + ")"))
+
+    // TODO: implement (but do we really need it?)
+    override def findIds(): HashSet[Symbol] = new HashSet[Symbol]
+
+    override def findId(): Symbol = lst.name
+  }
+
+  class HDLValueList(hdl: ScalaHDL, val lst: Seq[Int]) extends HDLObject(hdl) {
+
+    def size = lst.size
+
+    def apply(idx: HDLType): HDLValueHolder =
+      new HDLValueListElement(hdl, this, idx)
+
+    override def convert(arg: ConvertArg): String =
+      throw new RuntimeException("Syntax Error!")
+
+    override def exec(sigMap: HashMap[Symbol, Signal]) =
+      throw new RuntimeException("Syntax Error!")
+
+    override def findIds(): HashSet[Symbol] =
+      throw new RuntimeException("Syntax Error!")
+  }
+
+  class HDLValueListElement(hdl: ScalaHDL, val lst: HDLValueList, val idx: HDLType)
+      extends HDLValueHolder(hdl) {
+    override def convert(arg: ConvertArg): String =
+      throw new RuntimeException("Syntax Error!")
+
+    override def exec(sigMap: HashMap[Symbol, Signal]) =
+      new Signed(" ", lst.lst(idx.idt.exec(sigMap).value))
+
+    override def findIds(): HashSet[Symbol] =
+      throw new RuntimeException("Syntax Error!")
+
+    override def findId(): Symbol =
+      throw new RuntimeException("Syntax Error!")
   }
 
   case class HDLSignal(hdl: ScalaHDL, sig: () => Signal) extends HDLObject(hdl) {
@@ -686,6 +769,7 @@ package Core {
     implicit def tpe2HDLIdt(tpe: HDLType): HDLObject = tpe.idt
     implicit def sig2HDLType(sig: Signal): HDLType = toHDLType(sig)
     implicit def sym2HDLType(s: Symbol): HDLType = toHDLType(s)
+    implicit def lst2SigLst(lst: List[Signal]): HDLList = toHDLList(lst)
 
     private val hdl: ScalaHDL = this
     private var tmpNum = 0;
@@ -747,13 +831,29 @@ package Core {
       val name = unusedName(currentBlock.top.argsMap.keySet)
       sig.name = name.name
       val signed = sig match {
-        case s: Signed => false
-        case _ => true
+        case s: Signed => true
+        case _ => false
       }
       val info = ArgInfo(name.name, wire, middle, signed, sig.size)
       hdl.currentBlock.top.argsMap += (name -> info)
       hdl.currentBlock.top.sigMap += (name -> sig)
       new HDLType(HDLIdent(this, name), info)
+    }
+
+    def toHDLList(lst: List[Signal]): HDLList = {
+      val name = unusedName(currentBlock.top.argsMap.keySet)
+      // Check if all elements are of same type
+      val signed = lst(0) match {
+        case s: Signed => true
+        case _ => false
+      }
+      val info = ArgInfo(name.name, reg, middle, signed, lst(0).size, lst.size)
+      hdl.currentBlock.top.argsMap += (name -> info)
+      for (i <- 0 until lst.size) {
+        hdl.currentBlock.top.sigMap +=
+        (Symbol(name.name + "(" + i.toString + ")") -> lst(i))
+      }
+      new HDLList(this, name, lst)
     }
 
     object defMod extends Dynamic {
@@ -772,5 +872,9 @@ package Core {
      */
     def Simulator(hdl: ScalaHDL, mods: module*): ScalaHDL.Simulation.Simulator =
       new ScalaHDL.Simulation.Simulator(hdl, mods)
+
+    def HDLValueList(nums: Int*): HDLValueList = {
+      new HDLValueList(this, nums)
+    }
   }
 }
