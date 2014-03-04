@@ -427,7 +427,7 @@ package Core {
     }
 
     override def exec(sigMap: HashMap[Symbol, Signal]) =
-      sigMap(Symbol(lst.name.name + "(" + idx.idt.exec(sigMap) + ")"))
+      sigMap(Symbol(lst.name.name + "(" + idx.idt.exec(sigMap).value + ")"))
 
     // TODO: implement (but do we really need it?)
     override def findIds(): HashSet[Symbol] = new HashSet[Symbol]
