@@ -476,7 +476,7 @@ package Core {
       throw new RuntimeException("Syntax Error!")
 
     override def exec(sigMap: HashMap[Symbol, Signal]) =
-      throw new RuntimeException("Syntax Error!")
+      new Signed(" ", lst.lst(idx.idt.exec(sigMap).value))
 
     override def findIds(): HashSet[Symbol] =
       throw new RuntimeException("Syntax Error!")
