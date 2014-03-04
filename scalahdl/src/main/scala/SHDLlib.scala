@@ -305,7 +305,7 @@ package Core {
             tpe = reg
         }
         hdl.currentBlock.top.argsMap(id) =
-          ArgInfo(v.name, tpe, dir, v.signed, v.size)
+          ArgInfo(v.name, tpe, dir, v.signed, v.size, v.lstSize)
       }
       hdl.currentBlock.top.senslist ++= findSenslist(ob)
       a
@@ -325,6 +325,8 @@ package Core {
           ret ++= findSenslist(ob)
         case HDLSlice(_, ob, _, _) =>
           ret ++= findSenslist(ob)
+        case ob: HDLListElement =>
+          null
         case sig: HDLSignal =>
           null
         case _ =>
@@ -400,6 +402,37 @@ package Core {
     override def exec(sigMap: HashMap[Symbol, Signal]) =
       new Unsigned("", (ob.exec(sigMap).value >> lo) &
         (math.pow(2, hi - lo).toInt - 1))
+  }
+
+  class HDLList(hdl: ScalaHDL, val name: Symbol, lst: List[Signal])
+      extends HDLObject(hdl) {
+
+    def apply(idx: HDLType): HDLValueHolder =
+      new HDLListElement(hdl, this, idx)
+
+    override def convert(arg: ConvertArg): String = name.name
+
+    // TODO: implement (but do we really need it?)
+    override def exec(sigMap: HashMap[Symbol, Signal]) = null
+
+    // TODO: implement (but do we really need it?)
+    override def findIds(): HashSet[Symbol] = new HashSet[Symbol]
+  }
+
+  class HDLListElement(hdl: ScalaHDL, lst: HDLList, idx: HDLType)
+      extends HDLValueHolder(hdl) {
+
+    override def convert(arg: ConvertArg): String = {
+      lst.convert(arg) + "[" + idx.idt.convert(arg) + "]"
+    }
+
+    override def exec(sigMap: HashMap[Symbol, Signal]) =
+      sigMap(Symbol(lst.name.name + "(" + idx.idt.exec(sigMap) + ")"))
+
+    // TODO: implement (but do we really need it?)
+    override def findIds(): HashSet[Symbol] = new HashSet[Symbol]
+
+    override def findId(): Symbol = lst.name
   }
 
   case class HDLSignal(hdl: ScalaHDL, sig: () => Signal) extends HDLObject(hdl) {
@@ -686,6 +719,7 @@ package Core {
     implicit def tpe2HDLIdt(tpe: HDLType): HDLObject = tpe.idt
     implicit def sig2HDLType(sig: Signal): HDLType = toHDLType(sig)
     implicit def sym2HDLType(s: Symbol): HDLType = toHDLType(s)
+    implicit def lst2SigLst(lst: List[Signal]): HDLList = toHDLList(lst)
 
     private val hdl: ScalaHDL = this
     private var tmpNum = 0;
@@ -747,13 +781,29 @@ package Core {
       val name = unusedName(currentBlock.top.argsMap.keySet)
       sig.name = name.name
       val signed = sig match {
-        case s: Signed => false
-        case _ => true
+        case s: Signed => true
+        case _ => false
       }
       val info = ArgInfo(name.name, wire, middle, signed, sig.size)
       hdl.currentBlock.top.argsMap += (name -> info)
       hdl.currentBlock.top.sigMap += (name -> sig)
       new HDLType(HDLIdent(this, name), info)
+    }
+
+    def toHDLList(lst: List[Signal]): HDLList = {
+      val name = unusedName(currentBlock.top.argsMap.keySet)
+      // Check if all elements are of same type
+      val signed = lst(0) match {
+        case s: Signed => true
+        case _ => false
+      }
+      val info = ArgInfo(name.name, reg, middle, signed, lst(0).size, lst.size)
+      hdl.currentBlock.top.argsMap += (name -> info)
+      for (i <- 0 until lst.size) {
+        hdl.currentBlock.top.sigMap +=
+        (Symbol(name.name + "(" + i.toString + ")") -> lst(i))
+      }
+      new HDLList(this, name, lst)
     }
 
     object defMod extends Dynamic {
