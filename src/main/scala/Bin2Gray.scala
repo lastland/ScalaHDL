@@ -1,10 +1,7 @@
 package ScalaHDLExample.Bin2Gray
 
 import ScalaHDL.Core.ScalaHDL
-import ScalaHDL.Core.HDLType
-import ScalaHDL.Core.DataType._
 import ScalaHDL.Core.DataType.Signals._
-import ScalaHDL.Simulation.Simulator
 
 trait Bin2Gray extends ScalaHDL {
 

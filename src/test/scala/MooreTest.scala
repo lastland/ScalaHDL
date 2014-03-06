@@ -1,7 +1,6 @@
 import org.scalatest.FunSuite
 
 import ScalaHDLExample.FSM.Moore.Moore
-import ScalaHDL.Core.DataType._
 import ScalaHDL.Core.DataType.Signals._
 import ScalaHDL.Test.TestHelper
 

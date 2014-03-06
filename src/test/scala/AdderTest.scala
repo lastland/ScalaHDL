@@ -1,7 +1,6 @@
 import org.scalatest.FunSuite
 
 import ScalaHDLExample.Arithmetic.Add.Adder
-import ScalaHDL.Core.DataType._
 import ScalaHDL.Core.DataType.Signals._
 import ScalaHDL.Test.TestHelper
 

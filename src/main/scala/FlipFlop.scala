@@ -1,7 +1,6 @@
 package ScalaHDLExample.FlipFlop
 
 import ScalaHDL.Core.ScalaHDL
-import ScalaHDL.Core.DataType._
 import ScalaHDL.Core.DataType.Signals._
 
 trait FlipFlop extends ScalaHDL {
