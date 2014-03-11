@@ -717,12 +717,15 @@ package Core {
   class HDLModule(hdl: ScalaHDL,
     _name: Symbol, val params: Seq[Symbol], func: () => Unit)
       extends HDLBlock(hdl, func) {
+
+    private var m: Map[Symbol, Signal] = null
+
     def name = _name.name
 
-    def mapArgs(args: Seq[Any]): Map[Symbol, Any] = {
+    def mapArgs(args: Seq[Signal]): Map[Symbol, Signal] = {
       if (params.size != args.size)
         throw new WrongNumberOfArgumentsException(_name, params.size, args.size)
-      val m = params.zip(args).toMap
+      m = params.zip(args).toMap
       for (param <- params) {
         m(param) match {
           case s: Signal =>
@@ -738,19 +741,40 @@ package Core {
       m
     }
 
+    private def initialAssignment(k: Symbol, v: Signal): String = {
+      "  " + List(k.name.replace('(', '[').replace(')', ']'), "=",
+        v.value.toString).mkString(" ") + ";"
+    }
+
+    private def shouldHaveInitialValue(s: Symbol): Boolean = {
+      if (s.name.contains('(')) {
+        argsMap(Symbol(s.name.takeWhile(_ != '('))).tpe == reg
+      } else {
+        argsMap(s).tpe == reg
+      }
+    }
+
+    def makeInitialBlock(sigMap: HashMap[Symbol, Signal]): String = {
+      "initial begin\n" +
+      (for (kv <- sigMap if shouldHaveInitialValue(kv._1))
+      yield initialAssignment(kv._1, kv._2)).toList.sorted.mkString("\n") +
+      "\nend\n"
+    }
+
     override def convert(arg: ConvertArg): String = {
       if (_content.isEmpty) extract()
       hdl.currentBlock.push(this)
       val s = "module %s (\n".format(name) + params.map(_.name).mkString(",\n") +
       "\n);\n\n" +
         (for (arg <- argsMap) yield arg._2.declaration).toList.sorted.mkString("") + "\n" +
+        makeInitialBlock(sigMap ++ m) + "\n" +
         (for (stmt <- content) yield stmt.convert(arg)).mkString("") +
       "\nendmodule\n"
       hdl.currentBlock.pop()
       s
     }
 
-    def convert(args: Seq[Any]): String = {
+    def convert(args: Seq[Signal]): String = {
       mapArgs(args)
       convert(ConvertArg(verilog))
     }
@@ -867,7 +891,7 @@ package Core {
       }
     }
 
-    def convert(name: Symbol, args: Any*) = {
+    def convert(name: Symbol, args: Signal*) = {
       val m = modules(name)
       m.convert(args)
     }
