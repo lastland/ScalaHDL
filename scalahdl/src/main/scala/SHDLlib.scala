@@ -824,6 +824,11 @@ package Core {
 
     import ScalaHDL.Core.DataType.ArgInfo
 
+    def wrap(ob: HDLObject, max: Int): HDLObject = {
+      if (max <= 0) throw new IllegalArgumentException
+      HDLFunc2(this, mod, ob, new Signed(" ", math.pow(2, max).toInt))
+    }
+
     def toHDLType(name: Symbol): HDLType = new HDLType(
       HDLIdent(this, name), currentBlock.top.argsMap(name))
 

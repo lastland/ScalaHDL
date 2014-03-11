@@ -12,7 +12,7 @@ trait Subtractor extends ScalaHDL {
       when ('rst is 1) {
         'z := 0
       } .otherwise {
-        'z := ('a - 'b) % math.pow(2, size + 1).toInt
+        'z := wrap(('a - 'b), size + 1)
       }
     }
   }
