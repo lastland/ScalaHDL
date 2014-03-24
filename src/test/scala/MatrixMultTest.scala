@@ -3,6 +3,7 @@ import org.scalatest.FunSuite
 import ScalaHDLExample.Matrix.Mult.Mult
 import ScalaHDL.Core.DataType.Signals._
 import ScalaHDL.Test.TestHelper
+import scala.util.Random
 
 object MultTestBench extends Mult {
 
@@ -48,12 +49,12 @@ object MultTestBench extends Mult {
       'rst := 0
       for (i <- 0 until height_a) {
         for (j <- 0 until width_a) {
-          a(i)(j) := Console.readInt()
+          a(i)(j) := Random.nextInt(10)
         }
       }
       for (i <- 0 until height_b) {
         for (j <- 0 until width_b) {
-          b(i)(j) := Console.readInt()
+          b(i)(j) := Random.nextInt(10)
         }
       }
     }
@@ -65,41 +66,41 @@ class MultTest extends FunSuite with TestHelper {
     val clk = bool(0)
     val rst = bool(1)
 
-    val a00 = unsigned(0, 5)
-    val a01 = unsigned(0, 5)
-    val a02 = unsigned(0, 5)
-    val a03 = unsigned(0, 5)
-    val a10 = unsigned(0, 5)
-    val a11 = unsigned(0, 5)
-    val a12 = unsigned(0, 5)
-    val a13 = unsigned(0, 5)
-    val a20 = unsigned(0, 5)
-    val a21 = unsigned(0, 5)
-    val a22 = unsigned(0, 5)
-    val a23 = unsigned(0, 5)
+    val a00 = unsigned(0, 16)
+    val a01 = unsigned(0, 16)
+    val a02 = unsigned(0, 16)
+    val a03 = unsigned(0, 16)
+    val a10 = unsigned(0, 16)
+    val a11 = unsigned(0, 16)
+    val a12 = unsigned(0, 16)
+    val a13 = unsigned(0, 16)
+    val a20 = unsigned(0, 16)
+    val a21 = unsigned(0, 16)
+    val a22 = unsigned(0, 16)
+    val a23 = unsigned(0, 16)
 
-    val b00 = unsigned(0, 5)
-    val b01 = unsigned(0, 5)
-    val b02 = unsigned(0, 5)
-    val b10 = unsigned(0, 5)
-    val b11 = unsigned(0, 5)
-    val b12 = unsigned(0, 5)
-    val b20 = unsigned(0, 5)
-    val b21 = unsigned(0, 5)
-    val b22 = unsigned(0, 5)
-    val b30 = unsigned(0, 5)
-    val b31 = unsigned(0, 5)
-    val b32 = unsigned(0, 5)
+    val b00 = unsigned(0, 16)
+    val b01 = unsigned(0, 16)
+    val b02 = unsigned(0, 16)
+    val b10 = unsigned(0, 16)
+    val b11 = unsigned(0, 16)
+    val b12 = unsigned(0, 16)
+    val b20 = unsigned(0, 16)
+    val b21 = unsigned(0, 16)
+    val b22 = unsigned(0, 16)
+    val b30 = unsigned(0, 16)
+    val b31 = unsigned(0, 16)
+    val b32 = unsigned(0, 16)
 
-    val c00 = unsigned(0, 5)
-    val c01 = unsigned(0, 5)
-    val c02 = unsigned(0, 5)
-    val c10 = unsigned(0, 5)
-    val c11 = unsigned(0, 5)
-    val c12 = unsigned(0, 5)
-    val c20 = unsigned(0, 5)
-    val c21 = unsigned(0, 5)
-    val c22 = unsigned(0, 5)
+    val c00 = unsigned(0, 16)
+    val c01 = unsigned(0, 16)
+    val c02 = unsigned(0, 16)
+    val c10 = unsigned(0, 16)
+    val c11 = unsigned(0, 16)
+    val c12 = unsigned(0, 16)
+    val c20 = unsigned(0, 16)
+    val c21 = unsigned(0, 16)
+    val c22 = unsigned(0, 16)
 
     val sim = Simulator(MultTestBench,
       module('mult, clk, rst,

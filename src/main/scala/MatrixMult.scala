@@ -55,7 +55,8 @@ trait Mult extends ScalaHDL {
       } .otherwise {
         for (i <- 0 until height_a) {
           for (j <- 0 until width_b) {
-            val t = (1 until height_b).map((k) => a(i)(k) * b(k)(j)).foldLeft(
+            val t = (1 until height_b).map(
+              (k) => a(i)(k) * b(k)(j)).foldLeft(
               a(i)(0) * b(0)(j))(_ + _)
             c(i)(j) := t
           }
