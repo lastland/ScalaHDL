@@ -22,9 +22,9 @@ object Main extends Subtractor {
   def main(args: Array[String]) {
     val clk = bool(0)
     val rst = bool(0)
-    val a = signed(0, 4)
-    val b = signed(0, 4)
-    val z = signed(0, 5)
+    val a = unsigned(0, 4)
+    val b = unsigned(0, 4)
+    val z = unsigned(0, 5)
 
     println(convert('sub, clk, rst, a, b, z))
   }

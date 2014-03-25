@@ -77,9 +77,13 @@ package Core {
 
   abstract sealed class HDLObject(hdl: ScalaHDL) {
 
-    protected var _signed = false;
+    protected var _signed: Boolean = false;
+
+    protected var _lowerBound: Int = 0
 
     def signed = _signed
+
+    def lowerBound = _lowerBound
 
     def convert(arg: ConvertArg): String
 
@@ -186,6 +190,19 @@ package Core {
 
     _signed = a.signed || b.signed
 
+    private def getLowerBound: Int = {
+      val la = a.lowerBound
+      val lb = b.lowerBound
+      op match {
+        case `add` => la + lb
+        case `mul` => la * lb
+        case `concat` => la * math.pow(10, lb.toString.size).toInt + lb
+        case _ => 0
+      }
+    }
+
+    _lowerBound = getLowerBound
+
     override def findIds(): HashSet[Symbol] = {
       val ret = new HashSet[Symbol]
       ret ++= a.findIds()
@@ -272,8 +289,20 @@ package Core {
 
     override def findIds(): HashSet[Symbol] = new HashSet[Symbol]
 
+    private def mkAssignment(arg: ConvertArg, arginfo: ArgInfo): String = {
+      // wire
+      if (arginfo.tpe == wire)
+        HDLObject.mkIndents(arg.indents) +
+      "assign " + left.convert(arg) + " = " + right.convert(arg) + ";\n"
+      // reg
+      else
+        HDLObject.mkIndents(arg.indents) +
+      left.convert(arg) + " <= " + right.convert(arg) + ";\n"
+    }
+
     override def convert(arg: ConvertArg): String = {
       right match {
+        // convert HDLValueListElement to "case" in Verilog
         case elem: HDLValueListElement =>
           val new_arg = ConvertArg(arg.lang, arg.indents + 1, arg.signed)
           HDLObject.mkIndents(arg.indents) +
@@ -282,13 +311,25 @@ package Core {
           yield assignmentOfCase(left.convert(arg), i, elem.lst)).map(
           HDLObject.mkIndents(arg.indents + 1) + _).mkString("") +
           HDLObject.mkIndents(arg.indents) + "endcase\n"
+        // signal
+        case sig: HDLSignal =>
+          val sigVal = sig.sig()
+          val id = left.findId
+          val arginfo = hdl.currentBlock.top.argsMap(id)
+          if (arginfo.signed) {
+            new Signed(id.name, sigVal.value, arginfo.size)
+          } else {
+            new Unsigned(id.name, sigVal.value, arginfo.size)
+          }
+          if (arginfo.signed) {
+            new Signed(id.name, right.lowerBound, arginfo.size)
+          } else {
+            new Unsigned(id.name, right.lowerBound, arginfo.size)
+          }
+          mkAssignment(arg, arginfo)
+        // others
         case _ =>
-          if (hdl.currentBlock.top.argsMap(left.findId).tpe == wire)
-            HDLObject.mkIndents(arg.indents) +
-            "assign " + left.convert(arg) + " = " + right.convert(arg) + ";\n"
-          else
-            HDLObject.mkIndents(arg.indents) +
-            left.convert(arg) + " <= " + right.convert(arg) + ";\n"
+          mkAssignment(arg, hdl.currentBlock.top.argsMap(left.findId))
       }
     }
 
@@ -378,6 +419,9 @@ package Core {
   case class HDLIdent(hdl: ScalaHDL, name: Symbol)
       extends HDLValueHolder(hdl) {
 
+    if (!hdl.currentBlock.top.argsMap.contains(name))
+      throw new UndeclaredRegisterException(name)
+
     _signed = hdl.currentBlock.top.argsMap(name).signed
 
     override def findIds(): HashSet[Symbol] = {
@@ -392,7 +436,11 @@ package Core {
       else
         name.name
 
-    override def exec(sigMap: HashMap[Symbol, Signal]) = sigMap(name)
+    override def exec(sigMap: HashMap[Symbol, Signal]) = {
+      if (!sigMap.contains(name))
+        throw new UndeclaredRegisterException(name)
+      sigMap(name)
+    }
   }
 
   case class HDLIndex(hdl: ScalaHDL, ob: HDLObject, idx: Int)
@@ -487,11 +535,19 @@ package Core {
 
   case class HDLSignal(hdl: ScalaHDL, sig: () => Signal) extends HDLObject(hdl) {
 
+    private var firstVal = sig()
+    private var firstTime = true
+
+    _lowerBound = firstVal.value
+
     override def findIds(): HashSet[Symbol] = new HashSet[Symbol]
 
-    override def convert(arg: ConvertArg): String = sig().value.toString
+    override def convert(arg: ConvertArg): String = {
+      firstVal.value.toString
+    }
 
-    override def exec(sigMap: HashMap[Symbol, Signal]) = sig()
+    override def exec(sigMap: HashMap[Symbol, Signal]) =
+      if (firstTime) firstVal else sig()
   }
 
   abstract class HDLBlock(hdl: ScalaHDL, func: () => Unit)
@@ -892,6 +948,8 @@ package Core {
     }
 
     def convert(name: Symbol, args: Signal*) = {
+      if (!modules.contains(name))
+        throw new NoSuchModuleException(name)
       val m = modules(name)
       m.convert(args)
     }
