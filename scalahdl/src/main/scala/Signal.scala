@@ -41,6 +41,8 @@ package ScalaHDL.Core.DataType {
         2
       else if (value < 0)
         ("1" + s.dropWhile(_ == '1')).size
+      else if (value == 0)
+        1
       else
         s.size + 1
     }
@@ -158,8 +160,10 @@ package ScalaHDL.Core.DataType {
     override def /(other: Signal) =
       Signal.mkSignal(this, other, (a, b) => a / b)
 
-    override def %(other: Signal) =
-      Signal.mkSignal(this, other, (a, b) => a % b)
+    override def %(other: Signal) = other match {
+      case _: Signed => new Signed("", value % other.value)
+      case _ => new Unsigned("", value % other.value)
+    }
 
     override def &(other: Signal) = other match {
         case u: Unsigned => new Unsigned("", value & other.value)
@@ -246,11 +250,18 @@ package ScalaHDL.Core.DataType {
       else
         Signal.mkSignal(this, other, (a, b) => a / b)
 
-    override def %(other: Signal) =
-      if (_value < 0 && _value % other.value != 0)
-        Signal.mkSignal(this, other, (a, b) => a - (a / b - 1) * b)
-      else
-        Signal.mkSignal(this, other, (a, b) => a % b)
+    override def %(other: Signal) = other match {
+      case _: Signed =>
+        if (_value < 0 && _value % other.value != 0)
+          new Signed("", value - (value / other.value - 1) * other.value)
+        else
+          new Signed("", value % other.value)
+      case _ =>
+        if (_value < 0 && _value % other.value != 0)
+          new Unsigned("", value - (value / other.value - 1) * other.value)
+        else
+          new Unsigned("", value % other.value)
+    }
 
     // TODO: extend signed bits
 
