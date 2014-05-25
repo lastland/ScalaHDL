@@ -4,6 +4,7 @@ import org.bitbucket.inkytonik.dsinfo.DSInfo.makeCallWithName
 
 import ScalaHDL.Simulation.Waiter
 import ScalaHDL.Core.NotEnoughBitsException
+import ScalaHDL.Core.BitwiseTypeMismatchException
 
 package ScalaHDL.Core.DataType {
 
@@ -14,11 +15,16 @@ package ScalaHDL.Core.DataType {
   import Edge._
 
   private object Signal {
-    def mkSignal(value: Int): Signal = {
-      if (value < 0)
-        new Signed("", value)
-      else
-        new Unsigned("", value)
+    def mkSignal(l: Signal, r: Signal,
+      f: (Int, Int) => Int): Signal = {
+      val res = f(l.value, r.value)
+      l match {
+        case _: Signed => new Signed("", res)
+        case _ => r match {
+          case _: Signed => new Signed("", res)
+          case _ => new Unsigned("", res)
+        }
+      }
     }
   }
 
@@ -141,34 +147,40 @@ package ScalaHDL.Core.DataType {
       new Unsigned("", (~value & (1 << _bits) - 1), _bits)
 
     override def +(other: Signal) =
-      Signal.mkSignal(value + other.value)
+      Signal.mkSignal(this, other, (a, b) => a + b)
 
     override def -(other: Signal) =
-      Signal.mkSignal(value - other.value)
+      new Signed("", value - other.value)
 
     override def *(other: Signal) =
-      Signal.mkSignal(value * other.value)
+      Signal.mkSignal(this, other, (a, b) => a * b)
 
     override def /(other: Signal) =
-      Signal.mkSignal(value / other.value)
+      Signal.mkSignal(this, other, (a, b) => a / b)
 
     override def %(other: Signal) =
-      Signal.mkSignal(value % other.value)
+      Signal.mkSignal(this, other, (a, b) => a % b)
 
-    override def &(other: Signal) =
-      Signal.mkSignal(value & other.value)
+    override def &(other: Signal) = other match {
+        case u: Unsigned => new Unsigned("", value & other.value)
+        case _ => throw new BitwiseTypeMismatchException
+      }
 
-    override def |(other: Signal) =
-      Signal.mkSignal(value | other.value)
+    override def |(other: Signal) = other match {
+      case u: Unsigned => new Unsigned("", value | other.value)
+      case _ => throw new BitwiseTypeMismatchException
+    }
 
-    override def ^(other: Signal) =
-      Signal.mkSignal(value ^ other.value)
+    override def ^(other: Signal) = other match {
+      case u: Unsigned => new Unsigned("", value ^ other.value)
+      case _ => throw new BitwiseTypeMismatchException
+    }
 
     override def <<(other: Signal) =
-      Signal.mkSignal(value << other.value)
+      new Unsigned("", value << other.value)
 
     override def >>(other: Signal) =
-      Signal.mkSignal(value >> other.value)
+      new Unsigned("", value >> other.value)
 
     override def toString(): String =
       "Unsigned %s(value = %d, bits = %d)".format(name, _value, _bits)
@@ -193,6 +205,21 @@ package ScalaHDL.Core.DataType {
       case _ => throw new RuntimeException("only support for Bool!")
     }
 
+    override def &(other: Signal) = other match {
+      case u: Bool => new Bool("", value & other.value)
+      case _ => throw new BitwiseTypeMismatchException
+    }
+
+    override def |(other: Signal) = other match {
+      case u: Bool => new Bool("", value | other.value)
+      case _ => throw new BitwiseTypeMismatchException
+    }
+
+    override def ^(other: Signal) = other match {
+      case u: Bool => new Bool("", value ^ other.value)
+      case _ => throw new BitwiseTypeMismatchException
+    }
+
     override def toString(): String =
       "Bool %s(value = %d)".format(name, _value)
   }
@@ -215,15 +242,38 @@ package ScalaHDL.Core.DataType {
 
     override def /(other: Signal) =
       if (_value < 0)
-        Signal.mkSignal(_value / other.value - 1)
+        Signal.mkSignal(this, other, (a, b) => a / b - 1)
       else
-        Signal.mkSignal(_value / other.value)
+        Signal.mkSignal(this, other, (a, b) => a / b)
 
     override def %(other: Signal) =
       if (_value < 0 && _value % other.value != 0)
-        Signal.mkSignal(_value - (_value / other.value - 1) * other.value)
+        Signal.mkSignal(this, other, (a, b) => a - (a / b - 1) * b)
       else
-        Signal.mkSignal(_value % other.value)
+        Signal.mkSignal(this, other, (a, b) => a % b)
+
+    // TODO: extend signed bits
+
+    override def &(other: Signal) = other match {
+      case u: Signed => new Signed("", value & other.value)
+      case _ => throw new BitwiseTypeMismatchException
+    }
+
+    override def |(other: Signal) = other match {
+      case u: Signed => new Signed("", value | other.value)
+      case _ => throw new BitwiseTypeMismatchException
+    }
+
+    override def ^(other: Signal) = other match {
+      case u: Signed => new Signed("", value ^ other.value)
+      case _ => throw new BitwiseTypeMismatchException
+    }
+
+    override def <<(other: Signal) =
+      new Signed("", value << other.value)
+
+    override def >>(other: Signal) =
+      new Signed("", value >> other.value)
 
     override def toString(): String =
       "Signed %s(value = %d, bits = %d)".format(name, _value, _bits)

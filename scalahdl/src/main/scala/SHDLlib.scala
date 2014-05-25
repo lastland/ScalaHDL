@@ -59,6 +59,12 @@ package Core {
   }
   import Language._
 
+  object HDLBasicTypes extends Enumeration {
+    type HDLBasicTypes = Value
+    val none, bool, unsigned, signed = Value
+  }
+  import HDLBasicTypes._
+
   case class ConvertArg(lang: Language, indents: Int = 0, signed: Boolean = false)
 
   /*
@@ -76,7 +82,6 @@ package Core {
   }
 
   abstract sealed class HDLObject(hdl: ScalaHDL) {
-
     protected var _signed: Boolean = false;
 
     protected var _lowerBound: Int = 0
@@ -188,7 +193,9 @@ package Core {
   case class HDLFunc2 (hdl: ScalaHDL,
     op: HDLOperation, a: HDLObject, b: HDLObject) extends HDLFunc(hdl) {
 
-    _signed = a.signed || b.signed
+    _signed = if (op == sub) true
+    else if (op == mod && !b.signed) false
+    else a.signed || b.signed
 
     private def getLowerBound: Int = {
       val la = a.lowerBound
@@ -287,6 +294,17 @@ package Core {
       idx + ": " + left + " <= " + lst.lst(idx) + ";\n"
     }
 
+    private def validate(sigMap: HashMap[Symbol, Signal]): Boolean = {
+      val la = if (!hdl.currentBlock.isEmpty)
+        hdl.currentBlock.top.argsMap(left.findId).signed
+      else left.exec(sigMap) match {
+        case _: Signed => true
+        case _ => false
+      }
+      val rs = right.signed
+      if (la || !right.signed) true else false
+    }
+
     override def findIds(): HashSet[Symbol] = new HashSet[Symbol]
 
     private def mkAssignment(arg: ConvertArg, arginfo: ArgInfo): String = {
@@ -301,6 +319,7 @@ package Core {
     }
 
     override def convert(arg: ConvertArg): String = {
+      if (!validate(null)) throw new InvalidAssignmentException
       right match {
         // convert HDLValueListElement to "case" in Verilog
         case elem: HDLValueListElement =>
@@ -334,6 +353,7 @@ package Core {
     }
 
     override def exec(sigMap: HashMap[Symbol, Signal]): Signal = {
+      if (!validate(sigMap)) throw new InvalidAssignmentException
       val sig = left.exec(sigMap)
       sig.setNext(right.exec(sigMap).value)
       hdl.siglist.add(sig)
@@ -547,7 +567,12 @@ package Core {
     }
 
     override def exec(sigMap: HashMap[Symbol, Signal]) =
-      if (firstTime) firstVal else sig()
+      if (firstTime) {
+        firstTime = false
+        firstVal
+      } else {
+        sig()
+      }
   }
 
   abstract class HDLBlock(hdl: ScalaHDL, func: () => Unit)
@@ -906,7 +931,7 @@ package Core {
 
     def wrap(ob: HDLObject, max: Int): HDLObject = {
       if (max <= 0) throw new IllegalArgumentException
-      HDLFunc2(this, mod, ob, new Signed(" ", math.pow(2, max).toInt))
+      HDLFunc2(this, mod, ob, new Unsigned(" ", math.pow(2, max).toInt))
     }
 
     def toHDLType(name: Symbol): HDLType = new HDLType(

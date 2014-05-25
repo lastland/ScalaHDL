@@ -21,3 +21,10 @@ class NotEnoughBitsException(
     extends HDLException(
   "not enough bits to hold value %d in %s, require %d, get %d".format(
     value, sigName, expected, defacto))
+
+class InvalidAssignmentException extends HDLException(
+  "Can not assign signed signal to unsigned register!")
+
+class BitwiseTypeMismatchException
+    extends IllegalArgumentException(
+  "Bitwise operations can only be applied to two signals with the same type!")
