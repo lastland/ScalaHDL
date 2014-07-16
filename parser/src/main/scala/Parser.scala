@@ -33,7 +33,9 @@ class ScalaHDLParser extends RegexParsers {
     })
 
   def statement =
-    positioned(hdlidentifier ~ (":=" ~> expression) ^^ {
+    positioned(("@{" ~> """(?s)[^(@{)(@})]*""".r <~ "@}") ^^ {
+      case code => ScalaStatement(code)
+    } | hdlidentifier ~ (":=" ~> expression) ^^ {
       case left ~ right => AssignStatement(left, right)
     })
 
@@ -47,12 +49,16 @@ class ScalaHDLParser extends RegexParsers {
   def apply(input: String): Option[Module] = parseAll(
     module, new CharArrayReader(input.toArray)) match {
     case Success(mod, _) => Some(mod)
-    case x => None
+    case x => {
+      println(x)
+      None
+    }
   }
 }
 
 case class Identifier(symbol: String) extends Value {
-  override def generate: String = "'" + symbol
+  override def generate: String = symbol
+  override def toString = "'" + symbol
 }
 
 case class HDLInt(value: Int) extends Value {
@@ -64,7 +70,8 @@ abstract trait Value extends Statement
 case class Module(name: String, params: List[Identifier], blocks: List[Block])
     extends Statement {
   override def generate: String = List(s"trait $name extends ScalaHDL {",
-    s"defMod.$name(" + params.map(_.generate).mkString(",") + ") {",
+    s"defMod.$name(" + params.mkString(",") + ") {",
+    params.map(i => "val " + i.generate + " = " + i).mkString("\n"),
     blocks.map(_.generate).mkString("\n"),
   "}").mkString("\n")
 }
@@ -93,6 +100,10 @@ case class BinaryExpression(operator: String, left: Value, right: Value) extends
 
 case class UnaryExpression(operator: String, target: Value) extends Expression {
   override def generate: String = operator + target.generate
+}
+
+case class ScalaStatement(code: String) extends Statement {
+  override def generate: String = code
 }
 
 abstract trait Expression extends Statement
