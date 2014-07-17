@@ -16,6 +16,11 @@ class ScalaHDLParser extends RegexParsers {
 
   def value = (hdlidentifier) | (integer ^^ { HDLInt(_) })
 
+  def anyBut(c: Elem) = Parser { input =>
+    if (input.atEnd || input.first.equals(c)) Failure("", input)
+    else Success(input.first, input.rest)
+  }
+
   def module =
     positioned("defmod" ~> identifier ~ ("(" ~> repsep(hdlidentifier, ",") <~ ")") ~
       ("{" ~> block.* <~ "}") ^^ {
@@ -32,9 +37,15 @@ class ScalaHDLParser extends RegexParsers {
       case condition ~ blockName ~ statements => Block(condition, blockName, statements)
     })
 
+  def codeBlock(i: Int): Parser[String] =
+    ("{" ~ codeBlock(i+1) ~ "}") ^^ {
+      case lb ~ s ~ rb => lb + s + rb
+    } |
+    (not("{") ~> anyBut('}')+) ^^ { _.mkString }
+
   def statement =
-    positioned(("@{" ~> """(?s)[^(@{)(@})]*""".r <~ "@}") ^^ {
-      case code => ScalaStatement(code)
+    positioned(("@{" ~> (codeBlock(0).*) <~ "}") ^^ {
+      case code => ScalaStatement(code.mkString)
     } | hdlidentifier ~ (":=" ~> expression) ^^ {
       case left ~ right => AssignStatement(left, right)
     })
