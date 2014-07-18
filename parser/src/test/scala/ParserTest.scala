@@ -6,14 +6,25 @@ import ScalaHDL.Parser.ScalaHDLParser
 
 class ScalaHDLParserTest extends FunSuite {
 
-  val testProgram = """|defmod Adder(a, b, z) {
+  val testProgram = """|@GeAdder
+                       |defmod Adder(clk, a, b, z) {
                        |  @sync(1)
                        |  adder {
                        |    z := a + b
                        |  }
-                       |}""".stripMargin
+                       |}
+                       |
+                       |@main {
+                       |  clk = bool(0)
+                       |  a = signed(0, 5)
+                       |  b = signed(0, 5)
+                       |  z = signed(0, 6)
+                       |
+                       |  compile(adder(clk, a, b, z), "Adder.v")
+                       |} """.stripMargin
 
-  val testProgram2 = """|defmod Adder(a, b, z) {
+  val testProgram2 = """|@GeTest
+                        |defmod Adder(a, b, z) {
                         |  @sync(1)
                         |  adder {
                         |    @{
@@ -26,6 +37,15 @@ class ScalaHDLParserTest extends FunSuite {
                         |    }
                         |    }
                         |  }
+                        |}
+                        |
+                        |@main {
+                        |  clk = bool(0)
+                        |  a = signed(0, 5)
+                        |  b = signed(0, 5)
+                        |  z = signed(0, 6)
+                        |
+                        |  compile(adder(clk, a, b, z), "Adder.v")
                         |}""".stripMargin
 
 
