@@ -20,7 +20,8 @@ object AdderTestBench extends Adder {
   }
 }
 
-class AdderTest extends FunSuite with TestHelper {
+class AdderTest extends FunSuite
+    with TestHelper {
   test("test adder") {
     val clk = bool(0)
     val rst = bool(1)
@@ -28,7 +29,8 @@ class AdderTest extends FunSuite with TestHelper {
     val b = unsigned(0, 4)
     val z = unsigned(0, 5)
 
-    val Z = List(0, 0, 1, 1, 2, 15, 15, 30).iterator
+    val Z = List(
+      0, 0, 1, 1, 2, 15, 15, 30).iterator
 
     val sim = Simulator(AdderTestBench,
       module('adder, clk, rst, a, b, z),

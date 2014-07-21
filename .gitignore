@@ -5,3 +5,4 @@ project/plugins.sbt
 *.key
 *.py
 *.vcd
+.idea

@@ -22,7 +22,8 @@ trait FIFO extends ScalaHDL {
         'output := fifo_registers(DEPTH - 1)
         if (DEPTH > 1) {
           for (i <- 0 until DEPTH - 1)
-            fifo_registers(i + 1) := fifo_registers(i)
+            fifo_registers(i + 1) :=
+              fifo_registers(i)
         }
       }
     }
