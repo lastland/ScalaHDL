@@ -19,18 +19,9 @@ lazy val parser = project
   .settings(common: _*)
   .settings(name := "ScalaHDL Parser")
 
-lazy val plugin = project
-  .in(file("sbt-ScalaHDL"))
-  .dependsOn(lib, parser)
-  .settings(common: _*)
-  .settings(name := "ScalaHDL Sbt plugin",
-    sbtPlugin := true)
+lazy val plugin = ProjectRef(file("sbt-ScalaHDL"), "plugin")
 
-lazy val examples = project
-  .in(file("examples"))
-  .dependsOn(lib, plugin)
-  .settings(common: _*)
-  .settings(name := "ScalaHDL Examples")
+lazy val examples = ProjectRef(file("examples"), "examples")
 
 def common = Seq(
   organization := "com.liyaos",
