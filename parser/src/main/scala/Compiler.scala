@@ -3,18 +3,20 @@ package ScalaHDL.Parser
 import scala.io.Source
 import java.io._
 
+class CompilerException(fileName: String)
+    extends Exception("Compile error! Failed to compile " + fileName)
+
 class Compiler(sourcePath: String = ".", destinationPath: String = ".") {
   val parser = new ScalaHDLParser
 
   def compile(inputFileName: String, outputFileName: String): File = {
-    println(sourcePath + "/" + inputFileName)
     val source = Source.fromFile(sourcePath + "/" + inputFileName)
     val code = source.mkString("")
     source.close
 
     val res = parser(code) match {
       case Some(mod) => mod.generate
-      case _ => throw new RuntimeException("fail to parse!")
+      case _ => throw new CompilerException(inputFileName)
     }
 
     val outfile = new File(destinationPath + "/" + outputFileName)

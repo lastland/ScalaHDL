@@ -5,6 +5,7 @@ import sbt.Keys._
 
 import java.io.File
 import ScalaHDL.Parser.Compiler
+import ScalaHDL.Parser.CompilerException
 
 object SbtScalaHDL extends AutoPlugin {
 
@@ -26,7 +27,7 @@ object SbtScalaHDL extends AutoPlugin {
           compiler.compile(n + ".shdl", n + ".scala")
         ): _*)
       } catch {
-        case _: RuntimeException => println("Error!"); Seq()
+        case c: CompilerException => throw c
         case _: Throwable => Seq()
       }
     }.taskValue
