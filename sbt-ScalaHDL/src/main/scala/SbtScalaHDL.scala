@@ -28,7 +28,7 @@ object SbtScalaHDL extends AutoPlugin {
         ): _*)
       } catch {
         case c: CompilerException => throw c
-        case _: Throwable => Seq()
+        case t: Throwable => throw t
       }
     }.taskValue
   )

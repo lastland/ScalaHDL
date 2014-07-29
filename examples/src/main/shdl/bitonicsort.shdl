@@ -1,0 +1,73 @@
+@package = ScalaHDLExample.SHDL.BitonicSort
+@GeBitonic
+
+defmod sort8(clk, a[8], z[8]) {
+  @{
+    val ASC = 0
+    val DES = 1
+
+    def compare(a: HDLType, b: HDLType, x: HDLType, y: HDLType, dir: Int) {
+      async {
+        if (dir == ASC) {
+          when (a > b) {
+            x := b
+            y := a
+          } .otherwise {
+            x := a
+            y := b
+          }
+        } else {
+          when (a > b) {
+            x := a
+            y := b
+          } .otherwise {
+            x := b
+            y := a
+          }
+        }
+      }
+    }
+
+    def bitonicMerge(a: Seq[HDLType], z: Seq[HDLType], dir: Int) {
+      val n = a.size
+      val k = n / 2
+      if (n > 1) {
+        val t = (for (i <- 0 until n) yield unsigned(0, 4)).map(toHDLType)
+        for (i <- 0 until k) {
+          compare(a(i), a(i + k), t(i), t(i + k), dir)
+        }
+        bitonicMerge(t.take(k), z.take(k), dir)
+        bitonicMerge(t.drop(k), z.drop(k), dir)
+      } else {
+        async {
+          z.head := a.head
+        }
+      }
+    }
+
+    def bitonicSort(a: Seq[HDLType], z: Seq[HDLType], dir: Int) {
+      val n = a.size
+      val k = n / 2
+      if (n > 1) {
+        val t = (for (i <- 0 until n) yield unsigned(0, 4)).map(toHDLType)
+        bitonicSort(a.take(k), t.take(k), ASC)
+        bitonicSort(a.drop(k), t.drop(k), DES)
+        bitonicMerge(t, z, dir)
+      } else {
+        async {
+          z.head := a.head
+        }
+      }
+    }
+
+    bitonicSort(a, z, ASC)
+  }
+}
+
+@main {
+  clk = bool(0)
+  a = [unsigned(0, 4)] * 8
+  z = [unsigned(0, 4)] * 8
+
+  compile(sort8(clk, a, z), "BitonicSort.v")
+}
