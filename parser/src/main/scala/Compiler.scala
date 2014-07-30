@@ -20,6 +20,7 @@ class Compiler(sourcePath: String = ".", destinationPath: String = ".") {
     }
 
     val outfile = new File(destinationPath + "/" + outputFileName)
+    if (!outfile.getParentFile.exists) outfile.getParentFile.mkdirs()
     val out = new PrintWriter(outfile)
     out.print(res)
     out.close
